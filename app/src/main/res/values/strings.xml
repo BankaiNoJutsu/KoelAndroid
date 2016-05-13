@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">Koelouis</string>
+
+    <!-- Strings related to login -->
+    <string name="prompt_email">Email</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_sign_in">Log in</string>
+    <string name="error_authentication">We weren\'t able to authenticate you with the provided information. Please try again.</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="title_activity_login">Log in</string>
+    <string name="title_activity_main">Koelouis player</string>
+
+    <string name="title_section1">Section 1</string>
+    <string name="title_section2">Section 2</string>
+    <string name="title_section3">Section 3</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="syncDataButton">Sync data with distant server</string>
+
+
+    <string-array name="drawer_items">
+        <item>Home</item>
+        <item>Current queue</item>
+        <item>Artists</item>
+        <item>Albums</item>
+        <item>Playlists</item>
+        <item>Settings</item>
+    </string-array>
+</resources>
