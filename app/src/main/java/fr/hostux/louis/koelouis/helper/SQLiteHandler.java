@@ -218,7 +218,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
     }
 
     public List<Artist> getArtists() {
-        String selectQuery = "SELECT  * FROM " + TABLE_ARTIST;
+        String selectQuery = "SELECT  * FROM " + TABLE_ARTIST + " ORDER BY " + KEY_NAME + " ASC";
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
@@ -243,7 +243,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         return null;
     }
     public List<Album> getAlbums() {
-        String selectQuery = "SELECT  * FROM " + TABLE_ALBUM;
+        String selectQuery = "SELECT  * FROM " + TABLE_ALBUM + " ORDER BY " + KEY_NAME;
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
@@ -267,11 +267,63 @@ public class SQLiteHandler extends SQLiteOpenHelper {
 
         return null;
     }
+
+    public List<Album> findAlbumsByArtistId(String artistId) {
+        String selectQuery = "SELECT * FROM " + TABLE_ALBUM + " WHERE " + KEY_ARTIST_ID + " = ? ORDER BY " + KEY_NAME;
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { artistId });
+
+        ArrayList<Album> albums = new ArrayList<Album>();
+
+        if(cursor.moveToFirst()) {
+            do {
+                Album album = cursorToAlbum(cursor);
+                albums.add(album);
+            } while (cursor.moveToNext());
+
+            cursor.close();
+            db.close();
+
+            return albums;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
+    }
+
     public List<Song> getSongs() {
         String selectQuery = "SELECT  * FROM " + TABLE_SONG;
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
+
+        ArrayList<Song> songs = new ArrayList<Song>();
+
+        if(cursor.moveToFirst()) {
+            do {
+                Song song = cursorToSong(cursor);
+                songs.add(song);
+            } while (cursor.moveToNext());
+
+            cursor.close();
+            db.close();
+
+            return songs;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
+    }
+    public List<Song> findSongsByAlbumId(int albumId) {
+        String selectQuery = "SELECT * FROM " + TABLE_SONG + " WHERE " + KEY_ALBUM_ID + " = ? ORDER BY " + KEY_TRACK + ", " + KEY_TITLE;
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(albumId) });
 
         ArrayList<Song> songs = new ArrayList<Song>();
 
@@ -309,7 +361,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         return new Artist(id, name, image);
     }
     private Album cursorToAlbum(Cursor cursor) {
-        String id = cursor.getString(0);
+        int id = cursor.getInt(0);
         Artist artist = this.findArtistById(cursor.getInt(1));
         String name = cursor.getString(2);
         String cover = cursor.getString(3);

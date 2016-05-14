@@ -1,5 +1,6 @@
 package fr.hostux.louis.koelouis.models;
 
+import fr.hostux.louis.koelouis.Config;
 import fr.hostux.louis.koelouis.models.Album;
 
 /**
@@ -22,6 +23,31 @@ public class Song {
         this.track = track;
         this.playCount = playCount;
         this.liked = liked;
+        this.album = album;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public double getLength() {
+        return length;
+    }
+
+    public String getReadableLength() {
+        int intLength = (int) Math.round(length);
+        return String.format("%d:%02d", intLength/60, intLength%60);
+    }
+
+    public Album getAlbum() {
+        return album;
+    }
+
+    public void setAlbum(Album album) {
         this.album = album;
     }
 }

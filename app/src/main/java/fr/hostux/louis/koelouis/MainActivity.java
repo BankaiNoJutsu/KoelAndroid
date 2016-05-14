@@ -4,21 +4,30 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import fr.hostux.louis.koelouis.helper.KoelManager;
 import fr.hostux.louis.koelouis.helper.SessionManager;
+import fr.hostux.louis.koelouis.models.Album;
+import fr.hostux.louis.koelouis.models.Artist;
+import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 
 public class MainActivity extends AppCompatActivity {
@@ -31,8 +40,16 @@ public class MainActivity extends AppCompatActivity {
 
     private View progressView;
 
+    private TextView artistNameView;
+    private TextView songTitleView;
+    private ImageButton playerPlay;
+    private ImageButton playerPrev;
+    private ImageButton playerNext;
+
     private User user;
     private KoelManager koelManager;
+
+    private MediaPlayer mediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,11 +75,21 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Data has just been synced with server! Enjoy!", Toast.LENGTH_SHORT).show();
                 showProgress(false);
             }
+            // TODO: remettre ça
+            /*
+            @Override
+            public void onDataSyncError(int errorNumber) {
+                Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n° " + Integer.toString(errorNumber) + ").", Toast.LENGTH_SHORT).show();
+            }*/
         });
 
         progressView = findViewById(R.id.login_progress);
+        artistNameView = (TextView) findViewById(R.id.player_artist);
+        songTitleView = (TextView) findViewById(R.id.player_song);
 
         makeApplicationDrawer();
+
+        mediaPlayer = new MediaPlayer();
     }
 
     private void makeApplicationDrawer() {
@@ -87,14 +114,75 @@ public class MainActivity extends AppCompatActivity {
     private void selectItem(int position) {
         Fragment fragment = null;
         switch(position) {
+            // HOME
             case 0:
+            // QUEUE
             case 1:
+                fragment = HomeFragment.newInstance(user);
+                break;
+
+            // ARTISTS LIST
             case 2:
+                ArtistsFragment artistsFragment = ArtistsFragment.newInstance(1);
+                artistsFragment.setListener(new ArtistsFragment.OnListFragmentInteractionListener() {
+                    @Override
+                    public void onListFragmentInteraction(Artist artist) {
+                        ArtistFragment artistFragment = ArtistFragment.newInstance(1, artist.getId());
+
+                        artistFragment.setListener(new ArtistFragment.OnListFragmentInteractionListener() {
+                            @Override
+                            public void onListFragmentInteraction(Album album) {
+                                AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId());
+
+                                albumFragment.setListener(new AlbumFragment.OnListFragmentInteractionListener() {
+                                    @Override
+                                    public void onListFragmentInteraction(Song song) {
+                                        playSong(song);
+                                    }
+                                });
+
+                                changeFragment(albumFragment, album.getName(), true);
+                            }
+                        });
+
+                        changeFragment(artistFragment, artist.getName(), true);
+                    }
+                });
+
+                fragment = artistsFragment;
+
+                break;
+
+            // ALBUMS LIST
             case 3:
+                AlbumsFragment albumsFragment = AlbumsFragment.newInstance(1);
+                albumsFragment.setListener(new AlbumsFragment.OnListFragmentInteractionListener() {
+                    @Override
+                    public void onListFragmentInteraction(Album album) {
+                        AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId());
+
+                        albumFragment.setListener(new AlbumFragment.OnListFragmentInteractionListener() {
+                            @Override
+                            public void onListFragmentInteraction(Song song) {
+                                playSong(song);
+                            }
+                        });
+
+                        changeFragment(albumFragment, album.getName(), true);
+                    }
+                });
+
+                fragment = albumsFragment;
+
+                break;
+
+            // PLAYLISTS
             case 4:
                 fragment = HomeFragment.newInstance(user);
 
                 break;
+
+            // SETTINGS
             case 5:
 
                 SettingsFragment settingsFragment = SettingsFragment.newInstance();
@@ -111,16 +199,20 @@ public class MainActivity extends AppCompatActivity {
                 // should not be reached
         }
 
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction()
-                .replace(R.id.content_frame, fragment)
-                .commit();
-
+        changeFragment(fragment, drawerItemsTitles[position], false);
         drawerList.setItemChecked(position, true);
-        setTitle(drawerItemsTitles[position]);
         drawerLayout.closeDrawer(drawerList);
     }
 
+    private void changeFragment(Fragment fragment, String title, boolean addToStack) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .addToBackStack(title)
+                .commit();
+
+        setTitle(title);
+    }
 
     /**
      * Shows the progress UI and hides the login form.
@@ -160,5 +252,32 @@ public class MainActivity extends AppCompatActivity {
     public void setTitle(CharSequence newTitle) {
         title = newTitle;
         getSupportActionBar().setTitle(title);
+    }
+
+
+
+    private void playSong(Song song) {
+        artistNameView.setText(song.getAlbum().getArtist().getName());
+        songTitleView.setText(song.getTitle());
+
+        String endpoint = Config.API_URL + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
+        Log.d("main", endpoint);
+
+        Uri uri = Uri.parse(endpoint);
+
+        try {
+            mediaPlayer.setDataSource(getApplicationContext(), uri);
+            mediaPlayer.prepareAsync();
+
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mediaPlayer) {
+                    mediaPlayer.start();
+                }
+            });
+        } catch(IOException e) {
+            Toast.makeText(getApplicationContext(), "Error (650)", Toast.LENGTH_SHORT).show();
+            Log.e("main", e.getMessage());
+        }
     }
 }

@@ -1,6 +1,7 @@
 package fr.hostux.louis.koelouis.helper;
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -50,6 +51,103 @@ public class KoelManager {
         this.listener = null;
     }
 
+    private class AsyncSyncDatabaseTask extends AsyncTask {
+        private JSONObject jsonResponse;
+        private boolean syncUsers;
+        private boolean syncArtists;
+        private boolean syncAlbums;
+        private boolean syncSongs;
+        private boolean syncPlaylists;
+
+
+        public AsyncSyncDatabaseTask(final JSONObject jsonResponse, final boolean syncUsers, final boolean syncArtists, final boolean syncAlbums, final boolean syncSongs, final boolean syncPlaylists) {
+            this.jsonResponse = jsonResponse;
+            this.syncUsers = syncUsers;
+            this.syncArtists = syncArtists;
+            this.syncAlbums = syncAlbums;
+            this.syncSongs = syncSongs;
+            this.syncPlaylists = syncPlaylists;
+        }
+
+        @Override
+        protected void onPostExecute(Object o) {
+            super.onPostExecute(o);
+
+            if(listener != null) {
+                listener.onDataSyncOver(true);
+            }
+        }
+
+        @Override
+        protected Object doInBackground(Object[] objects) {
+            SQLiteHandler db = new SQLiteHandler(context);
+
+            try {
+                // ON CLEAN D'ABORD LES DBS
+                if(syncUsers) {
+                    db.deleteFromUserTable();
+                }
+                if(syncArtists) {
+                    db.deleteFromArtistTable();
+                }
+                if(syncAlbums) {
+                    db.deleteFromAlbumTable();
+                }
+                if(syncSongs) {
+                    db.deleteFromSongTable();
+                }
+
+
+                if (syncUsers) {
+                    JSONArray users = jsonResponse.getJSONArray("users");
+
+                    for (int u = 0; u < users.length(); u++) {
+                        JSONObject user = users.getJSONObject(u);
+
+                        db.addUser(user.getInt("id"), user.getString("name"), user.getString("email"), user.getBoolean("is_admin"));
+                    }
+                }
+                if (syncArtists) {
+                    JSONArray artists = jsonResponse.getJSONArray("artists");
+
+                    for (int a = 0; a < artists.length(); a++) {
+                        JSONObject artist = artists.getJSONObject(a);
+
+                        db.addArtist(artist.getInt("id"), artist.getString("name"), artist.getString("image"));
+
+                        if (syncAlbums) {
+                            JSONArray albums = artist.getJSONArray("albums");
+
+                            for (int al = 0; al < albums.length(); al++) {
+                                JSONObject album = albums.getJSONObject(al);
+
+                                db.addAlbum(album.getInt("id"), album.getInt("artist_id"), album.getString("name"), album.getString("cover"));
+
+                                if (syncSongs) {
+                                    JSONArray songs = album.getJSONArray("songs");
+
+                                    for (int s = 0; s < songs.length(); s++) {
+                                        JSONObject song = songs.getJSONObject(s);
+
+                                        db.addSong(song.getString("id"), song.getInt("album_id"), song.getString("title"), song.getDouble("length"), song.getInt("track"));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (syncPlaylists) {
+
+                }
+            } catch (JSONException e) {
+                Log.e("koelManager", e.getMessage());
+                Toast.makeText(context, "Une erreur interne a été détectée (n°510).", Toast.LENGTH_SHORT).show();
+            }
+
+            return null;
+        }
+    }
+
     /**
      *
      * @param syncUsers : independent
@@ -59,6 +157,7 @@ public class KoelManager {
      * @param syncPlaylists : requires syncUsers
      */
     private void syncData(final boolean syncUsers, final boolean syncArtists, final boolean syncAlbums, final boolean syncSongs, final boolean syncPlaylists) {
+
         if(listener != null) {
             listener.onDataSync(true);
         }
@@ -69,60 +168,11 @@ public class KoelManager {
                     @Override
                     public void onResponse(String response) {
                         try {
-                            SQLiteHandler db = new SQLiteHandler(context);
                             JSONObject jsonResponse = new JSONObject(response);
 
-                            // TODO : make the database syncing in another thread
+                            AsyncSyncDatabaseTask asyncSyncDatabaseTask = new AsyncSyncDatabaseTask(jsonResponse, syncUsers, syncArtists, syncAlbums, syncSongs, syncPlaylists);
+                            asyncSyncDatabaseTask.execute();
 
-                            if(syncUsers) {
-                                JSONArray users = jsonResponse.getJSONArray("users");
-                                db.deleteFromUserTable();
-
-                                for(int u=0; u < users.length(); u++) {
-                                    JSONObject user = users.getJSONObject(u);
-
-                                    db.addUser(user.getInt("id"), user.getString("name"), user.getString("email"), user.getBoolean("is_admin"));
-                                }
-                            }
-                            if(syncArtists) {
-                                JSONArray artists = jsonResponse.getJSONArray("artists");
-                                db.deleteFromArtistTable();
-
-                                for(int a=0; a < artists.length(); a++) {
-                                    JSONObject artist = artists.getJSONObject(a);
-
-                                    db.addArtist(artist.getInt("id"), artist.getString("name"), artist.getString("image"));
-
-                                    if(syncAlbums) {
-                                        JSONArray albums = artist.getJSONArray("albums");
-                                        db.deleteFromAlbumTable();
-
-                                        for(int al=0; al < albums.length(); al++) {
-                                            JSONObject album = albums.getJSONObject(al);
-
-                                            db.addAlbum(album.getInt("id"), album.getInt("artist_id"), album.getString("name"), album.getString("cover"));
-
-                                            if(syncSongs) {
-                                                JSONArray songs = album.getJSONArray("songs");
-                                                db.deleteFromSongTable();
-
-                                                for(int s=0; s < songs.length(); s++) {
-                                                    JSONObject song = songs.getJSONObject(s);
-
-                                                    db.addSong(song.getString("id"), song.getInt("album_id"), song.getString("title"), song.getDouble("length"), song.getInt("track"));
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if(syncPlaylists) {
-
-                            }
-
-                            if(listener != null) {
-                                listener.onDataSyncOver(true);
-                            }
                         } catch(JSONException e) {
                             Log.e("koelManager", e.getMessage());
                             Toast.makeText(context, "Une erreur interne a été détectée (n°510).", Toast.LENGTH_SHORT).show();
