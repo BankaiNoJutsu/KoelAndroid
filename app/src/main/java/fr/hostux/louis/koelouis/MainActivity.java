@@ -10,9 +10,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
@@ -24,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import fr.hostux.louis.koelouis.helper.KoelManager;
+import fr.hostux.louis.koelouis.helper.MediaStore;
+import fr.hostux.louis.koelouis.helper.QueueHelper;
 import fr.hostux.louis.koelouis.helper.SessionManager;
 import fr.hostux.louis.koelouis.models.Album;
 import fr.hostux.louis.koelouis.models.Artist;
@@ -34,6 +39,14 @@ public class MainActivity extends AppCompatActivity {
 
     private CharSequence title;
 
+    private Fragment currentFragment;
+    private HomeFragment homeFragment;
+    private QueueFragment queueFragment;
+    private ArtistsFragment artistsFragment;
+    private AlbumsFragment albumsFragment;
+    private SongsFragment songsFragment;
+    private SettingsFragment settingsFragment;
+
     private String[] drawerItemsTitles;
     private DrawerLayout drawerLayout;
     private ListView drawerList;
@@ -42,13 +55,14 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView artistNameView;
     private TextView songTitleView;
-    private ImageButton playerPlay;
-    private ImageButton playerPrev;
-    private ImageButton playerNext;
+    private ImageButton playerPlayButton;
+    private ImageButton playerPrevButton;
+    private ImageButton playerNextButton;
 
     private User user;
     private KoelManager koelManager;
 
+    private QueueHelper queueHelper;
     private MediaPlayer mediaPlayer;
 
     @Override
@@ -87,9 +101,34 @@ public class MainActivity extends AppCompatActivity {
         artistNameView = (TextView) findViewById(R.id.player_artist);
         songTitleView = (TextView) findViewById(R.id.player_song);
 
+        playerPlayButton = (ImageButton) findViewById(R.id.play_button);
+        playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
+        playerNextButton = (ImageButton) findViewById(R.id.next_button);
+
+        playerPlayButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                togglePlayPause();
+            }
+        });
+        playerPrevButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                prevSong();
+            }
+        });
+        playerNextButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                nextSong();
+            }
+        });
+
+        initializePlayer();
+
         makeApplicationDrawer();
 
-        mediaPlayer = new MediaPlayer();
+        makeFragments();
     }
 
     private void makeApplicationDrawer() {
@@ -103,11 +142,191 @@ public class MainActivity extends AppCompatActivity {
         items.add(new DrawerItem(drawerItemsTitles[1], R.drawable.ic_albums));
         items.add(new DrawerItem(drawerItemsTitles[2], R.drawable.ic_artist));
         items.add(new DrawerItem(drawerItemsTitles[3], R.drawable.ic_album));
-        items.add(new DrawerItem(drawerItemsTitles[4], R.drawable.ic_playlists));
-        items.add(new DrawerItem(drawerItemsTitles[5], R.drawable.ic_plus));
+        items.add(new DrawerItem(drawerItemsTitles[4], R.drawable.ic_song));
+        items.add(new DrawerItem(drawerItemsTitles[5], R.drawable.ic_playlists));
+        items.add(new DrawerItem(drawerItemsTitles[6], R.drawable.ic_settings));
 
         drawerList.setAdapter(new DrawerListAdapter(this, items));
         drawerList.setOnItemClickListener(new DrawerItemClickListener());
+    }
+
+    private void makeFragments() {
+
+        final HomeFragment.OnFragmentInteractionListener homeFragmentListener = new HomeFragment.OnFragmentInteractionListener() {
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final QueueFragment.OnListFragmentInteractionListener queueFragmentListener = new QueueFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Song song, int position) {
+                //playSong(song);
+            }
+
+            @Override
+            public void onPopupButtonClick(Song song, View view, int position) {
+                createQueuePopupMenu(song, view, position);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final AlbumFragment.OnListFragmentInteractionListener albumFragmentListener = new AlbumFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Song song) {
+                playSong(song);
+                queueHelper.clearQueue();
+            }
+
+            @Override
+            public void onPopupButtonClick(Song song, View view) {
+                createPopupMenu(song, view);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final ArtistsFragment.OnListFragmentInteractionListener artistsFragmentListener = new ArtistsFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Artist artist) {
+                ArtistFragment artistFragment = ArtistFragment.newInstance(1, artist.getId(), artist.getName());
+
+                artistFragment.setListener(new ArtistFragment.OnListFragmentInteractionListener() {
+                    @Override
+                    public void onListFragmentInteraction(Album album) {
+                        AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId(), album.getName());
+
+                        albumFragment.setListener(albumFragmentListener);
+
+                        changeFragment(albumFragment, true);
+                    }
+
+                    @Override
+                    public void updateActivityTitle(String title) {
+                        setTitle(title);
+                    }
+                });
+
+                changeFragment(artistFragment, true);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final AlbumsFragment.OnListFragmentInteractionListener albumsFragmentListener = new AlbumsFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Album album) {
+                AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId(), album.getName());
+
+                albumFragment.setListener(albumFragmentListener);
+
+                changeFragment(albumFragment, true);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final SongsFragment.OnListFragmentInteractionListener songsFragmentListener = new SongsFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Song song) {
+                playSong(song);
+                queueHelper.clearQueue();
+            }
+
+            @Override
+            public void onPopupButtonClick(Song song, View view) {
+                createPopupMenu(song, view);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final SettingsFragment.OnFragmentInteractionListener settingsFragmentListener = new SettingsFragment.OnFragmentInteractionListener() {
+            @Override
+            public void onRequestDataSync() {
+                koelManager.syncAll();
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+
+        homeFragment = HomeFragment.newInstance(user);
+        homeFragment.setListener(homeFragmentListener);
+
+        queueFragment = QueueFragment.newInstance(1, queueHelper);
+        queueFragment.setListener(queueFragmentListener);
+
+        artistsFragment = ArtistsFragment.newInstance(1);
+        artistsFragment.setListener(artistsFragmentListener);
+
+        albumsFragment = AlbumsFragment.newInstance(1);
+        albumsFragment.setListener(albumsFragmentListener);
+
+        songsFragment = SongsFragment.newInstance(1);
+        songsFragment.setListener(songsFragmentListener);
+
+        settingsFragment = SettingsFragment.newInstance();
+        settingsFragment.setListener(settingsFragmentListener);
+    }
+
+    private void createPopupMenu(final Song song, View view) {
+        PopupMenu popupMenu = new PopupMenu(MainActivity.this, view);
+
+        popupMenu.getMenuInflater().inflate(R.menu.popup_song, popupMenu.getMenu());
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.addToQueueButton:
+                        queueHelper.add(song);
+                        break;
+
+                    case R.id.playNextButton:
+                        queueHelper.addNext(song);
+                        break;
+
+                    case R.id.addToPlaylistButton:
+                        Toast.makeText(getApplicationContext(), "Soon...", Toast.LENGTH_SHORT).show();
+                        break;
+                }
+
+                return true;
+            }
+        });
+        popupMenu.show();
+    }
+    private void createQueuePopupMenu(final Song song, View view, final int position) {
+        PopupMenu popupMenu = new PopupMenu(MainActivity.this, view);
+
+        popupMenu.getMenuInflater().inflate(R.menu.popup_queue, popupMenu.getMenu());
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.removeFromQueueButton:
+                        queueHelper.removeFromQueue(position);
+                        updateQueueFragment();
+                        break;
+                }
+
+                return true;
+            }
+        });
+        popupMenu.show();
     }
 
     /** Swaps fragments in the main content view */
@@ -116,102 +335,55 @@ public class MainActivity extends AppCompatActivity {
         switch(position) {
             // HOME
             case 0:
+                fragment = homeFragment;
+                break;
+
             // QUEUE
             case 1:
-                fragment = HomeFragment.newInstance(user);
+                fragment = queueFragment;
                 break;
 
             // ARTISTS LIST
             case 2:
-                ArtistsFragment artistsFragment = ArtistsFragment.newInstance(1);
-                artistsFragment.setListener(new ArtistsFragment.OnListFragmentInteractionListener() {
-                    @Override
-                    public void onListFragmentInteraction(Artist artist) {
-                        ArtistFragment artistFragment = ArtistFragment.newInstance(1, artist.getId());
-
-                        artistFragment.setListener(new ArtistFragment.OnListFragmentInteractionListener() {
-                            @Override
-                            public void onListFragmentInteraction(Album album) {
-                                AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId());
-
-                                albumFragment.setListener(new AlbumFragment.OnListFragmentInteractionListener() {
-                                    @Override
-                                    public void onListFragmentInteraction(Song song) {
-                                        playSong(song);
-                                    }
-                                });
-
-                                changeFragment(albumFragment, album.getName(), true);
-                            }
-                        });
-
-                        changeFragment(artistFragment, artist.getName(), true);
-                    }
-                });
-
                 fragment = artistsFragment;
-
                 break;
 
             // ALBUMS LIST
             case 3:
-                AlbumsFragment albumsFragment = AlbumsFragment.newInstance(1);
-                albumsFragment.setListener(new AlbumsFragment.OnListFragmentInteractionListener() {
-                    @Override
-                    public void onListFragmentInteraction(Album album) {
-                        AlbumFragment albumFragment = AlbumFragment.newInstance(1, album.getId());
-
-                        albumFragment.setListener(new AlbumFragment.OnListFragmentInteractionListener() {
-                            @Override
-                            public void onListFragmentInteraction(Song song) {
-                                playSong(song);
-                            }
-                        });
-
-                        changeFragment(albumFragment, album.getName(), true);
-                    }
-                });
-
                 fragment = albumsFragment;
+                break;
 
+            // SONGS LIST
+            case 4:
+                fragment = songsFragment;
                 break;
 
             // PLAYLISTS
-            case 4:
-                fragment = HomeFragment.newInstance(user);
-
+            case 5:
+                fragment = homeFragment;
                 break;
 
             // SETTINGS
-            case 5:
-
-                SettingsFragment settingsFragment = SettingsFragment.newInstance();
-                settingsFragment.setListener(new SettingsFragment.OnFragmentInteractionListener() {
-                    @Override
-                    public void onRequestDataSync() {
-                        koelManager.syncAll();
-                    }
-                });
-
+            case 6:
                 fragment = settingsFragment;
                 break;
             default:
                 // should not be reached
         }
 
-        changeFragment(fragment, drawerItemsTitles[position], false);
+        changeFragment(fragment, false);
         drawerList.setItemChecked(position, true);
         drawerLayout.closeDrawer(drawerList);
     }
 
-    private void changeFragment(Fragment fragment, String title, boolean addToStack) {
+    private void changeFragment(Fragment fragment, boolean addToStack) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
                 .replace(R.id.content_frame, fragment)
-                .addToBackStack(title)
+                .addToBackStack("my fragment")
                 .commit();
 
-        setTitle(title);
+        currentFragment = fragment;
     }
 
     /**
@@ -240,6 +412,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void updateQueueFragment() {
+        if(currentFragment != null && currentFragment == queueFragment) {
+            queueFragment.getAdapter().notifyDataSetChanged();
+        }
+    }
+
 
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
         @Override
@@ -254,9 +432,37 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setTitle(title);
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+    }
 
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+    }
 
-    private void playSong(Song song) {
+    private void initializePlayer() {
+        queueHelper = new QueueHelper();
+        mediaPlayer = new MediaPlayer();
+
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                Song next = queueHelper.next();
+                if(next != null) {
+                    playSong(next);
+                } else {
+                    playerPlayButton.setImageResource(R.drawable.ic_bigplay);
+                }
+            }
+        });
+    }
+
+    private void playSong(final Song song) {
+        mediaPlayer.reset();
+        queueHelper.setCurrent(song);
+
         artistNameView.setText(song.getAlbum().getArtist().getName());
         songTitleView.setText(song.getTitle());
 
@@ -266,18 +472,54 @@ public class MainActivity extends AppCompatActivity {
         Uri uri = Uri.parse(endpoint);
 
         try {
+            showProgress(true);
             mediaPlayer.setDataSource(getApplicationContext(), uri);
             mediaPlayer.prepareAsync();
 
             mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
                 public void onPrepared(MediaPlayer mediaPlayer) {
-                    mediaPlayer.start();
+                    showProgress(false);
+                    togglePlayPause();
                 }
             });
         } catch(IOException e) {
             Toast.makeText(getApplicationContext(), "Error (650)", Toast.LENGTH_SHORT).show();
             Log.e("main", e.getMessage());
+        }
+    }
+
+    private void prevSong() {
+        queueHelper.addNext(queueHelper.getCurrent());
+        updateQueueFragment();
+        Song prev = queueHelper.prev();
+        if(prev != null) {
+            playSong(prev);
+        }
+    }
+    private void nextSong() {
+        queueHelper.addToHistory(queueHelper.getCurrent());
+        Song next = queueHelper.next();
+        updateQueueFragment();
+        if(next != null) {
+            playSong(next);
+        }
+    }
+
+    private void togglePlayPause() {
+        if(queueHelper.getCurrent() == null) {
+            MediaStore mediaStore = new MediaStore(getApplicationContext());
+            if(mediaStore.getSongs().size() > 0) {
+                playSong(mediaStore.getSongs().get(0));
+            }
+        }
+        else if(mediaPlayer.isPlaying()) {
+            mediaPlayer.pause();
+            playerPlayButton.setImageResource(R.drawable.ic_bigplay);
+
+        } else {
+            mediaPlayer.start();
+            playerPlayButton.setImageResource(R.drawable.ic_bigpause);
         }
     }
 }

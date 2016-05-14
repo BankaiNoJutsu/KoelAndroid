@@ -10,32 +10,28 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import java.util.List;
+import java.util.LinkedList;
 
-import fr.hostux.louis.koelouis.helper.MediaStore;
-import fr.hostux.louis.koelouis.models.Album;
+import fr.hostux.louis.koelouis.helper.QueueHelper;
+import fr.hostux.louis.koelouis.models.Song;
 
-public class ArtistFragment extends Fragment {
+public class QueueFragment extends Fragment {
 
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int columnCount = 1;
-    private static final String ARG_ARTIST_ID = "artistId";
-    private String artistId;
-    private static final String ARG_ARTIST_NAME = "artistName";
-    private String artistName;
-
-
     private OnListFragmentInteractionListener listener;
+    private QueueHelper queueHelper;
+    private QueueRecyclerViewAdapter adapter;
 
-    public ArtistFragment() {
+    public QueueFragment() {
     }
 
-    public static ArtistFragment newInstance(int columnCount, String artistId, String artistName) {
-        ArtistFragment fragment = new ArtistFragment();
+    @SuppressWarnings("unused")
+    public static QueueFragment newInstance(int columnCount, QueueHelper queueHelper) {
+        QueueFragment fragment = new QueueFragment();
+        fragment.setQueueHelper(queueHelper);
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
-        args.putString(ARG_ARTIST_ID, artistId);
-        args.putString(ARG_ARTIST_NAME, artistName);
         fragment.setArguments(args);
         return fragment;
     }
@@ -46,17 +42,14 @@ public class ArtistFragment extends Fragment {
 
         if (getArguments() != null) {
             columnCount = getArguments().getInt(ARG_COLUMN_COUNT);
-            artistId = getArguments().getString(ARG_ARTIST_ID);
-            artistName = getArguments().getString(ARG_ARTIST_NAME);
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_artist_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_queue_list, container, false);
 
-        // Set the adapter
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
             RecyclerView recyclerView = (RecyclerView) view;
@@ -66,14 +59,14 @@ public class ArtistFragment extends Fragment {
                 recyclerView.setLayoutManager(new GridLayoutManager(context, columnCount));
             }
 
-            MediaStore mediaStore = new MediaStore(context);
-            List<Album> albums = mediaStore.getAlbums(artistId, true);
+            LinkedList<Song> songs = queueHelper.getQueue();
 
-            recyclerView.setAdapter(new ArtistRecyclerViewAdapter(albums, listener));
+            adapter = new QueueRecyclerViewAdapter(songs, listener);
+            recyclerView.setAdapter(adapter);
         }
 
         if(listener != null) {
-            listener.updateActivityTitle(artistName);
+            listener.updateActivityTitle("Current queue");
         }
 
         return view;
@@ -81,10 +74,19 @@ public class ArtistFragment extends Fragment {
 
     public interface OnListFragmentInteractionListener {
         void updateActivityTitle(String title);
-        void onListFragmentInteraction(Album album);
+        void onListFragmentInteraction(Song song, int position);
+        void onPopupButtonClick(Song song, View view, int position);
     }
 
     public void setListener(OnListFragmentInteractionListener listener) {
         this.listener = listener;
+    }
+
+    public void setQueueHelper(QueueHelper queueHelper) {
+        this.queueHelper = queueHelper;
+    }
+
+    public QueueRecyclerViewAdapter getAdapter() {
+        return adapter;
     }
 }

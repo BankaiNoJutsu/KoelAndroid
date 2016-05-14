@@ -73,10 +73,16 @@ public class ArtistsFragment extends Fragment {
 
             recyclerView.setAdapter(new ArtistsRecyclerViewAdapter(artists, listener));
         }
+
+        if(listener != null) {
+            listener.updateActivityTitle("Artists");
+        }
+
         return view;
     }
 
     public interface OnListFragmentInteractionListener {
+        void updateActivityTitle(String title);
         void onListFragmentInteraction(Artist artist);
     }
 

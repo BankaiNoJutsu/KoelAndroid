@@ -21,6 +21,8 @@ public class AlbumFragment extends Fragment {
     private int columnCount = 1;
     private static final String ARG_ALBUM_ID = "albumId";
     private int albumId;
+    private static final String ARG_ALBUM_NAME = "albumName";
+    private String albumName;
 
 
     private OnListFragmentInteractionListener listener;
@@ -28,11 +30,12 @@ public class AlbumFragment extends Fragment {
     public AlbumFragment() {
     }
 
-    public static AlbumFragment newInstance(int columnCount, int albumId) {
+    public static AlbumFragment newInstance(int columnCount, int albumId, String albumName) {
         AlbumFragment fragment = new AlbumFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
         args.putInt(ARG_ALBUM_ID, albumId);
+        args.putString(ARG_ALBUM_NAME, albumName);
         fragment.setArguments(args);
         return fragment;
     }
@@ -44,6 +47,7 @@ public class AlbumFragment extends Fragment {
         if (getArguments() != null) {
             columnCount = getArguments().getInt(ARG_COLUMN_COUNT);
             albumId = getArguments().getInt(ARG_ALBUM_ID);
+            albumName = getArguments().getString(ARG_ALBUM_NAME);
         }
     }
 
@@ -67,11 +71,18 @@ public class AlbumFragment extends Fragment {
 
             recyclerView.setAdapter(new AlbumRecyclerViewAdapter(songs, listener));
         }
+
+        if(listener != null) {
+            listener.updateActivityTitle(albumName);
+        }
+
         return view;
     }
 
     public interface OnListFragmentInteractionListener {
+        void updateActivityTitle(String title);
         void onListFragmentInteraction(Song song);
+        void onPopupButtonClick(Song song, View view);
     }
 
     public void setListener(OnListFragmentInteractionListener listener) {

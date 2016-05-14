@@ -24,6 +24,27 @@
         android:text="Song title"/>
 
     <TextView
+        android:id="@+id/song_artist"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/text_margin"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textStyle="bold"
+        android:text="Artist"
+        android:layout_below="@+id/song_title"
+        android:layout_toEndOf="@+id/song_icon" />
+
+    <TextView
+        android:id="@+id/song_album"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/text_margin"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="Album"
+        android:layout_below="@+id/song_title"
+        android:layout_toRightOf="@+id/song_artist" />
+
+    <TextView
         android:id="@+id/song_length"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -31,7 +52,7 @@
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="2:54"
         android:layout_below="@+id/song_title"
-        android:layout_toEndOf="@+id/song_icon" />
+        android:layout_toRightOf="@+id/song_album" />
 
     <ImageButton
         android:id="@+id/song_button_popupMenu"

@@ -67,10 +67,16 @@ public class AlbumsFragment extends Fragment {
 
             recyclerView.setAdapter(new AlbumsRecyclerViewAdapter(albums, listener));
         }
+
+        if(listener != null) {
+            listener.updateActivityTitle("Albums");
+        }
+
         return view;
     }
 
     public interface OnListFragmentInteractionListener {
+        void updateActivityTitle(String title);
         void onListFragmentInteraction(Album album);
     }
 

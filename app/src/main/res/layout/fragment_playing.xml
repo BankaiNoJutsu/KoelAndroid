@@ -74,7 +74,7 @@
 
         <ImageButton
             android:id="@+id/play_button"
-            android:src="@drawable/ic_biglay"
+            android:src="@drawable/ic_bigplay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="?android:attr/borderlessButtonStyle"/>

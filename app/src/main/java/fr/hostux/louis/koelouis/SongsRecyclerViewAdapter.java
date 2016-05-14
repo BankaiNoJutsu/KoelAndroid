@@ -1,6 +1,5 @@
 package fr.hostux.louis.koelouis;
 
-import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,17 +7,20 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import fr.hostux.louis.koelouis.AlbumFragment.OnListFragmentInteractionListener;
-import fr.hostux.louis.koelouis.models.Song;
-
 import java.util.List;
 
-public class AlbumRecyclerViewAdapter extends RecyclerView.Adapter<AlbumRecyclerViewAdapter.ViewHolder> {
+import fr.hostux.louis.koelouis.SongsFragment.OnListFragmentInteractionListener;
+import fr.hostux.louis.koelouis.helper.MediaStore;
+import fr.hostux.louis.koelouis.models.Song;
+
+public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecyclerViewAdapter.ViewHolder> {
 
     private final List<Song> songs;
     private final OnListFragmentInteractionListener listener;
 
-    public AlbumRecyclerViewAdapter(List<Song> songs, OnListFragmentInteractionListener listener) {
+    private MediaStore mediaStore;
+
+    public SongsRecyclerViewAdapter(List<Song> songs, OnListFragmentInteractionListener listener) {
         this.songs = songs;
         this.listener = listener;
     }
@@ -26,7 +28,7 @@ public class AlbumRecyclerViewAdapter extends RecyclerView.Adapter<AlbumRecycler
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.fragment_album, parent, false);
+                .inflate(R.layout.fragment_songs, parent, false);
         return new ViewHolder(view);
     }
 
@@ -36,6 +38,8 @@ public class AlbumRecyclerViewAdapter extends RecyclerView.Adapter<AlbumRecycler
 
         holder.song = song;
         holder.songTitleView.setText(song.getTitle());
+        holder.songArtistView.setText(song.getAlbum().getArtist().getName());
+        holder.songAlbumView.setText(song.getAlbum().getName());
         holder.songLengthView.setText(song.getReadableLength());
 
         holder.view.setOnClickListener(new View.OnClickListener() {
@@ -68,6 +72,8 @@ public class AlbumRecyclerViewAdapter extends RecyclerView.Adapter<AlbumRecycler
     public class ViewHolder extends RecyclerView.ViewHolder {
         public final View view;
         public final TextView songTitleView;
+        public final TextView songArtistView;
+        public final TextView songAlbumView;
         public final TextView songLengthView;
         public final ImageButton popupMenuButton;
         public Song song;
@@ -76,6 +82,8 @@ public class AlbumRecyclerViewAdapter extends RecyclerView.Adapter<AlbumRecycler
             super(view);
             this.view = view;
             songTitleView = (TextView) view.findViewById(R.id.song_title);
+            songArtistView = (TextView) view.findViewById(R.id.song_artist);
+            songAlbumView = (TextView) view.findViewById(R.id.song_album);
             songLengthView = (TextView) view.findViewById(R.id.song_length);
             popupMenuButton = (ImageButton) view.findViewById(R.id.song_button_popupMenu);
         }

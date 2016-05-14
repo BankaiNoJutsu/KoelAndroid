@@ -44,6 +44,10 @@ public class SettingsFragment extends Fragment {
 
         syncData.setOnClickListener(syncDataHandler);
 
+        if(listener != null) {
+            listener.updateActivityTitle("Koelouis settings");
+        }
+
         return rootView;
     }
 
@@ -56,6 +60,7 @@ public class SettingsFragment extends Fragment {
     };
 
     public interface OnFragmentInteractionListener {
+        void updateActivityTitle(String title);
         void onRequestDataSync();
     }
 

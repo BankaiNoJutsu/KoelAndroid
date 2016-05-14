@@ -295,7 +295,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
     }
 
     public List<Song> getSongs() {
-        String selectQuery = "SELECT  * FROM " + TABLE_SONG;
+        String selectQuery = "SELECT  * FROM " + TABLE_SONG + " ORDER BY " + KEY_TITLE;
 
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
