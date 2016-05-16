@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="fr.hostux.louis.koelouis.Playing">
+    android:tag="fragmentPlaying">
 
     <ImageView
         android:id="@+id/album_cover"
@@ -13,8 +13,8 @@
         android:layout_alignParentTop ="true" />
 
     <TextView
-        android:id="@+id/song_name"
-        android:text="Song title"
+        android:id="@+id/song_title"
+        android:text="-"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:singleLine="true"
@@ -26,11 +26,11 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textSize="30dp"
         android:gravity="center"
-        android:layout_above="@id/artist_name" />
+        android:layout_above="@+id/artist_name" />
 
     <TextView
         android:id="@+id/artist_name"
-        android:text="Artist"
+        android:text="-"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:singleLine="true"
@@ -41,11 +41,11 @@
         android:scrollHorizontally="true"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:gravity="center"
-        android:layout_above="@id/album_name" />
+        android:layout_above="@+id/album_name" />
 
     <TextView
         android:id="@+id/album_name"
-        android:text="Album"
+        android:text="-"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:singleLine="true"

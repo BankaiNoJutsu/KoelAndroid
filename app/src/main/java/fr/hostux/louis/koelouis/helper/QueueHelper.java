@@ -12,6 +12,7 @@ public class QueueHelper {
     private Song current;
     private LinkedList<Song> queue;
     private LinkedList<Song> history;
+    private OnQueueChangedListener listener;
 
     public QueueHelper() {
         queue = new LinkedList<Song>();
@@ -20,9 +21,17 @@ public class QueueHelper {
 
     public void addNext(Song song) {
         queue.offerFirst(song);
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
     }
     public void add(Song song) {
         queue.offer(song);
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
     }
 
     public Song getCurrent() {
@@ -36,9 +45,17 @@ public class QueueHelper {
     // Retrieves and removes head of queue
     // return null if empty
     public Song next() {
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
+
         return queue.poll();
     }
     public Song prev() {
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
+
         return history.poll();
     }
 
@@ -56,9 +73,33 @@ public class QueueHelper {
 
     public void removeFromQueue(int position) {
         queue.remove(position);
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
     }
 
     public void clearQueue() {
         queue.clear();
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
+    }
+
+    public void setQueue(LinkedList<Song> queue) {
+        this.queue = queue;
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
+    }
+
+    public interface OnQueueChangedListener {
+        public void updateQueue(LinkedList<Song> newQueue);
+    }
+
+    public void setListener(OnQueueChangedListener listener) {
+        this.listener = listener;
     }
 }

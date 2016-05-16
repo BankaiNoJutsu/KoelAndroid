@@ -1,4 +1,4 @@
-package fr.hostux.louis.koelouis;
+package fr.hostux.louis.koelouis.fragments;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -9,32 +9,33 @@ import android.widget.TextView;
 
 import java.util.List;
 
-import fr.hostux.louis.koelouis.QueueFragment.OnListFragmentInteractionListener;
+import fr.hostux.louis.koelouis.R;
+import fr.hostux.louis.koelouis.fragments.SongsFragment.OnListFragmentInteractionListener;
 import fr.hostux.louis.koelouis.helper.MediaStore;
 import fr.hostux.louis.koelouis.models.Song;
 
-public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecyclerViewAdapter.ViewHolder> {
+public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecyclerViewAdapter.ViewHolder> {
 
-    private final List<Song> queue;
+    private final List<Song> songs;
     private final OnListFragmentInteractionListener listener;
 
     private MediaStore mediaStore;
 
-    public QueueRecyclerViewAdapter(List<Song> queue, OnListFragmentInteractionListener listener) {
-        this.queue = queue;
+    public SongsRecyclerViewAdapter(List<Song> songs, OnListFragmentInteractionListener listener) {
+        this.songs = songs;
         this.listener = listener;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.fragment_queue, parent, false);
+                .inflate(R.layout.fragment_songs, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, final int position) {
-        Song song = queue.get(position);
+        Song song = songs.get(position);
 
         holder.song = song;
         holder.songTitleView.setText(song.getTitle());
@@ -46,7 +47,7 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
             @Override
             public void onClick(View v) {
                 if (null != listener) {
-                    listener.onListFragmentInteraction(holder.song, position);
+                    listener.setQueueAndPlay(songs.subList(position, songs.size()));
                 }
             }
         });
@@ -55,7 +56,7 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
             @Override
             public void onClick(View view) {
                 if(listener != null) {
-                    listener.onPopupButtonClick(holder.song, view, position);
+                    listener.onPopupButtonClick(holder.song, view);
                 }
             }
         });
@@ -63,10 +64,10 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
 
     @Override
     public int getItemCount() {
-        if(queue == null) {
+        if(songs == null) {
             return 0;
         }
-        return queue.size();
+        return songs.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -85,7 +86,7 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
             songArtistView = (TextView) view.findViewById(R.id.song_artist);
             songAlbumView = (TextView) view.findViewById(R.id.song_album);
             songLengthView = (TextView) view.findViewById(R.id.song_length);
-            popupMenuButton = (ImageButton) view.findViewById(R.id.queue_button_popupMenu);
+            popupMenuButton = (ImageButton) view.findViewById(R.id.song_button_popupMenu);
         }
     }
 }

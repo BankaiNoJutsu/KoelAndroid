@@ -35,4 +35,8 @@
     <string name="playNext">Play next</string>
 
     <string name="removeFromQueue">Remove from queue</string>
+
+    <string name="title_activity_playing">PlayingActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
 </resources>

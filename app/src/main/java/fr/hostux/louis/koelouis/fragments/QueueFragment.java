@@ -1,4 +1,4 @@
-package fr.hostux.louis.koelouis;
+package fr.hostux.louis.koelouis.fragments;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 
 import java.util.LinkedList;
 
+import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.QueueHelper;
 import fr.hostux.louis.koelouis.models.Song;
 
@@ -20,16 +21,14 @@ public class QueueFragment extends Fragment {
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int columnCount = 1;
     private OnListFragmentInteractionListener listener;
-    private QueueHelper queueHelper;
     private QueueRecyclerViewAdapter adapter;
 
     public QueueFragment() {
     }
 
     @SuppressWarnings("unused")
-    public static QueueFragment newInstance(int columnCount, QueueHelper queueHelper) {
+    public static QueueFragment newInstance(int columnCount) {
         QueueFragment fragment = new QueueFragment();
-        fragment.setQueueHelper(queueHelper);
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
         fragment.setArguments(args);
@@ -59,8 +58,7 @@ public class QueueFragment extends Fragment {
                 recyclerView.setLayoutManager(new GridLayoutManager(context, columnCount));
             }
 
-            LinkedList<Song> songs = queueHelper.getQueue();
-
+            LinkedList<Song> songs = null;
             adapter = new QueueRecyclerViewAdapter(songs, listener);
             recyclerView.setAdapter(adapter);
         }
@@ -80,10 +78,6 @@ public class QueueFragment extends Fragment {
 
     public void setListener(OnListFragmentInteractionListener listener) {
         this.listener = listener;
-    }
-
-    public void setQueueHelper(QueueHelper queueHelper) {
-        this.queueHelper = queueHelper;
     }
 
     public QueueRecyclerViewAdapter getAdapter() {

@@ -3,14 +3,21 @@ package fr.hostux.louis.koelouis;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
-import android.media.MediaPlayer;
-import android.net.Uri;
+import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
@@ -19,26 +26,43 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
+import fr.hostux.louis.koelouis.fragments.AlbumFragment;
+import fr.hostux.louis.koelouis.fragments.AlbumsFragment;
+import fr.hostux.louis.koelouis.fragments.ArtistFragment;
+import fr.hostux.louis.koelouis.fragments.ArtistsFragment;
+import fr.hostux.louis.koelouis.fragments.HomeFragment;
+import fr.hostux.louis.koelouis.fragments.QueueFragment;
+import fr.hostux.louis.koelouis.fragments.SettingsFragment;
+import fr.hostux.louis.koelouis.fragments.SongsFragment;
 import fr.hostux.louis.koelouis.helper.KoelManager;
-import fr.hostux.louis.koelouis.helper.MediaStore;
 import fr.hostux.louis.koelouis.helper.QueueHelper;
 import fr.hostux.louis.koelouis.helper.SessionManager;
 import fr.hostux.louis.koelouis.models.Album;
 import fr.hostux.louis.koelouis.models.Artist;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
+import fr.hostux.louis.koelouis.services.PlayerService;
+
+// TODO: refactor a lot to a MusicService
 
 public class MainActivity extends AppCompatActivity {
 
     private CharSequence title;
 
+    private static FragmentManager fragmentManager;
     private Fragment currentFragment;
     private HomeFragment homeFragment;
     private QueueFragment queueFragment;
@@ -53,17 +77,36 @@ public class MainActivity extends AppCompatActivity {
 
     private View progressView;
 
+    private LinearLayout playerControls;
+    private LinearLayout albumLayout;
     private TextView artistNameView;
     private TextView songTitleView;
     private ImageButton playerPlayButton;
     private ImageButton playerPrevButton;
     private ImageButton playerNextButton;
 
-    private User user;
-    private KoelManager koelManager;
 
-    private QueueHelper queueHelper;
-    private MediaPlayer mediaPlayer;
+    private final Handler handler = new Handler();
+    private static final long PROGRESS_UPDATE_INTERNAL = 1000;
+    private static final long PROGRESS_UPDATE_INITIAL_INTERVAL = 100;
+    private final Runnable updateProgressTask = new Runnable() {
+        @Override
+        public void run() {
+            updateProgress();
+        }
+    };
+    private final ScheduledExecutorService executorService =
+            Executors.newSingleThreadScheduledExecutor();
+
+    private ScheduledFuture<?> scheduleFuture;
+    private PlaybackStateCompat lastPlaybackState;
+
+    private static User user;
+    private static KoelManager koelManager;
+
+    private PlayerService playerService;
+    private MediaSessionCompat mediaSession;
+    private Intent playerServiceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,30 +119,42 @@ public class MainActivity extends AppCompatActivity {
             startActivity(loginIntent);
         }
 
-        user = sessionManager.getUser();
-        koelManager = new KoelManager(getApplicationContext());
+        if(savedInstanceState == null) {
+            user = sessionManager.getUser();
+            koelManager = new KoelManager(getApplicationContext());
 
-        koelManager.setListener(new KoelManager.KoelManagerListener() {
-            @Override
-            public void onDataSync(boolean success) {
-                showProgress(true);
-            }
-            @Override
-            public void onDataSyncOver(boolean success) {
-                Toast.makeText(getApplicationContext(), "Data has just been synced with server! Enjoy!", Toast.LENGTH_SHORT).show();
-                showProgress(false);
-            }
-            // TODO: remettre ça
-            /*
-            @Override
-            public void onDataSyncError(int errorNumber) {
-                Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n° " + Integer.toString(errorNumber) + ").", Toast.LENGTH_SHORT).show();
-            }*/
-        });
+            koelManager.setListener(new KoelManager.KoelManagerListener() {
+                @Override
+                public void onDataSync(boolean success) {
+                    showProgress(true);
+                }
+                @Override
+                public void onDataSyncOver(boolean success) {
+                    Toast.makeText(getApplicationContext(), "Data has just been synced with server! Enjoy!", Toast.LENGTH_SHORT).show();
+                    showProgress(false);
+                }
+                // TODO: remettre ça
+                /*
+                @Override
+                public void onDataSyncError(int errorNumber) {
+                    Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n° " + Integer.toString(errorNumber) + ").", Toast.LENGTH_SHORT).show();
+                }*/
+            });
+        }
 
         progressView = findViewById(R.id.login_progress);
         artistNameView = (TextView) findViewById(R.id.player_artist);
         songTitleView = (TextView) findViewById(R.id.player_song);
+
+        playerControls = (LinearLayout) findViewById(R.id.player_controls);
+        albumLayout = (LinearLayout) findViewById(R.id.album_layout);
+
+        albumLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // TODO: intent playing activity
+            }
+        });
 
         playerPlayButton = (ImageButton) findViewById(R.id.play_button);
         playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
@@ -108,27 +163,73 @@ public class MainActivity extends AppCompatActivity {
         playerPlayButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                togglePlayPause();
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+
+                if(playerService.isPlaying()) {
+                    controls.pause();
+                } else {
+                    controls.play();
+                }
+
+                // playerService.processPlayPause();
             }
         });
         playerPrevButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                prevSong();
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                controls.skipToPrevious();
+                //playerService.processPrev();
             }
         });
         playerNextButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                nextSong();
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                controls.skipToNext();
+                //playerService.processNext();
             }
         });
-
-        initializePlayer();
 
         makeApplicationDrawer();
 
         makeFragments();
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopSeekbarUpdate();
+        super.onDestroy();
+    }
+
+    private ServiceConnection playerConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            PlayerService.PlayerBinder binder = (PlayerService.PlayerBinder)iBinder;
+            playerService = binder.getService();
+
+            mediaSession = playerService.getMediaSession();
+            try {
+                connectToSession(mediaSession.getSessionToken());
+            } catch(RemoteException e) {
+                Log.e("main", "could not connect to media controller");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if(playerServiceIntent == null) {
+            playerServiceIntent = new Intent(this, PlayerService.class);
+            startService(playerServiceIntent);
+            bindService(playerServiceIntent, playerConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     private void makeApplicationDrawer() {
@@ -151,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void makeFragments() {
+        fragmentManager = getSupportFragmentManager();
 
         final HomeFragment.OnFragmentInteractionListener homeFragmentListener = new HomeFragment.OnFragmentInteractionListener() {
             @Override
@@ -161,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
         final QueueFragment.OnListFragmentInteractionListener queueFragmentListener = new QueueFragment.OnListFragmentInteractionListener() {
             @Override
             public void onListFragmentInteraction(Song song, int position) {
-                //playSong(song);
+                //playerService.processPlaySong(song);
             }
 
             @Override
@@ -176,9 +278,8 @@ public class MainActivity extends AppCompatActivity {
         };
         final AlbumFragment.OnListFragmentInteractionListener albumFragmentListener = new AlbumFragment.OnListFragmentInteractionListener() {
             @Override
-            public void onListFragmentInteraction(Song song) {
-                playSong(song);
-                queueHelper.clearQueue();
+            public void setQueueAndPlay(List<Song> queue) {
+                playerService.processSetQueueAndPlay(queue);
             }
 
             @Override
@@ -237,9 +338,8 @@ public class MainActivity extends AppCompatActivity {
         };
         final SongsFragment.OnListFragmentInteractionListener songsFragmentListener = new SongsFragment.OnListFragmentInteractionListener() {
             @Override
-            public void onListFragmentInteraction(Song song) {
-                playSong(song);
-                queueHelper.clearQueue();
+            public void setQueueAndPlay(List<Song> queue) {
+                playerService.processSetQueueAndPlay(queue);
             }
 
             @Override
@@ -266,21 +366,27 @@ public class MainActivity extends AppCompatActivity {
 
         homeFragment = HomeFragment.newInstance(user);
         homeFragment.setListener(homeFragmentListener);
+        homeFragment.setRetainInstance(true);
 
-        queueFragment = QueueFragment.newInstance(1, queueHelper);
+        queueFragment = QueueFragment.newInstance(1);
         queueFragment.setListener(queueFragmentListener);
+        queueFragment.setRetainInstance(true);
 
         artistsFragment = ArtistsFragment.newInstance(1);
         artistsFragment.setListener(artistsFragmentListener);
+        artistsFragment.setRetainInstance(true);
 
         albumsFragment = AlbumsFragment.newInstance(1);
         albumsFragment.setListener(albumsFragmentListener);
+        albumsFragment.setRetainInstance(true);
 
         songsFragment = SongsFragment.newInstance(1);
         songsFragment.setListener(songsFragmentListener);
+        songsFragment.setRetainInstance(true);
 
         settingsFragment = SettingsFragment.newInstance();
         settingsFragment.setListener(settingsFragmentListener);
+        settingsFragment.setRetainInstance(true);
     }
 
     private void createPopupMenu(final Song song, View view) {
@@ -292,11 +398,11 @@ public class MainActivity extends AppCompatActivity {
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.addToQueueButton:
-                        queueHelper.add(song);
+                        playerService.addToQueue(song);
                         break;
 
                     case R.id.playNextButton:
-                        queueHelper.addNext(song);
+                        playerService.addNext(song);
                         break;
 
                     case R.id.addToPlaylistButton:
@@ -318,8 +424,8 @@ public class MainActivity extends AppCompatActivity {
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.removeFromQueueButton:
-                        queueHelper.removeFromQueue(position);
-                        updateQueueFragment();
+                        playerService.removeFromQueue(position);
+                        //requestUpdateQueueFragment();
                         break;
                 }
 
@@ -377,10 +483,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void changeFragment(Fragment fragment, boolean addToStack) {
-        FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
-                .replace(R.id.content_frame, fragment)
-                .addToBackStack("my fragment")
+                .replace(R.id.content_frame, fragment, fragment.getTag())
+                .addToBackStack(fragment.getTag())
                 .commit();
 
         currentFragment = fragment;
@@ -412,12 +517,97 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updateQueueFragment() {
-        if(currentFragment != null && currentFragment == queueFragment) {
-            queueFragment.getAdapter().notifyDataSetChanged();
+    private final MediaControllerCompat.Callback mediaControllerCallback = new MediaControllerCompat.Callback() {
+        @Override
+        public void onPlaybackStateChanged(PlaybackStateCompat state) {
+            Log.d("main", "onPlaybackstate changed");
+            updatePlaybackState(state);
+        }
+
+        @Override
+        public void onMetadataChanged(MediaMetadataCompat metadata) {
+            if (metadata != null) {
+                updateMetadata(metadata);
+            }
+        }
+    };
+
+    private void connectToSession(MediaSessionCompat.Token token) throws RemoteException {
+        MediaControllerCompat mediaController = new MediaControllerCompat(
+                MainActivity.this, token);
+
+        setSupportMediaController(mediaController);
+        mediaController.registerCallback(mediaControllerCallback);
+        PlaybackStateCompat state = mediaController.getPlaybackState();
+        updatePlaybackState(state);
+        MediaMetadataCompat metadata = mediaController.getMetadata();
+        if (metadata != null) {
+            updateMetadata(metadata);
+        }
+        updateProgress();
+        if (state != null && (state.getState() == PlaybackStateCompat.STATE_PLAYING ||
+                state.getState() == PlaybackStateCompat.STATE_BUFFERING)) {
+            scheduleSeekbarUpdate();
         }
     }
 
+
+    private void updatePlaybackState(PlaybackStateCompat state) {
+        if(state == null) {
+            return;
+        }
+
+        lastPlaybackState = state;
+
+        if(state.getState() == PlaybackStateCompat.STATE_PLAYING) {
+            showProgress(false);
+            scheduleSeekbarUpdate();
+            playerPlayButton.setImageResource(R.drawable.ic_bigpause);
+        } else if(state.getState() == PlaybackStateCompat.STATE_BUFFERING) {
+            showProgress(true);
+            stopSeekbarUpdate();
+        } else {
+            stopSeekbarUpdate();
+            showProgress(false);
+            playerPlayButton.setImageResource(R.drawable.ic_bigplay);
+        }
+    }
+
+    private void updateProgress() {
+        Log.d("main", "update");
+    }
+
+
+    private void scheduleSeekbarUpdate() {
+        stopSeekbarUpdate();
+        if (!executorService.isShutdown()) {
+            scheduleFuture = executorService.scheduleAtFixedRate(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            handler.post(updateProgressTask);
+                        }
+                    }, PROGRESS_UPDATE_INITIAL_INTERVAL,
+                    PROGRESS_UPDATE_INTERNAL, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void stopSeekbarUpdate() {
+        if (scheduleFuture != null) {
+            scheduleFuture.cancel(false);
+        }
+    }
+
+    private void updateMetadata(MediaMetadataCompat metadata) {
+        Song currentSong = playerService.getCurrent();
+        if(currentSong != null) {
+            artistNameView.setText(currentSong.getAlbum().getArtist().getName());
+            songTitleView.setText(currentSong.getTitle());
+        } else {
+            artistNameView.setText("-");
+            songTitleView.setText("-");
+        }
+    }
 
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
         @Override
@@ -440,86 +630,5 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-    }
-
-    private void initializePlayer() {
-        queueHelper = new QueueHelper();
-        mediaPlayer = new MediaPlayer();
-
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mediaPlayer) {
-                Song next = queueHelper.next();
-                if(next != null) {
-                    playSong(next);
-                } else {
-                    playerPlayButton.setImageResource(R.drawable.ic_bigplay);
-                }
-            }
-        });
-    }
-
-    private void playSong(final Song song) {
-        mediaPlayer.reset();
-        queueHelper.setCurrent(song);
-
-        artistNameView.setText(song.getAlbum().getArtist().getName());
-        songTitleView.setText(song.getTitle());
-
-        String endpoint = Config.API_URL + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
-        Log.d("main", endpoint);
-
-        Uri uri = Uri.parse(endpoint);
-
-        try {
-            showProgress(true);
-            mediaPlayer.setDataSource(getApplicationContext(), uri);
-            mediaPlayer.prepareAsync();
-
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mediaPlayer) {
-                    showProgress(false);
-                    togglePlayPause();
-                }
-            });
-        } catch(IOException e) {
-            Toast.makeText(getApplicationContext(), "Error (650)", Toast.LENGTH_SHORT).show();
-            Log.e("main", e.getMessage());
-        }
-    }
-
-    private void prevSong() {
-        queueHelper.addNext(queueHelper.getCurrent());
-        updateQueueFragment();
-        Song prev = queueHelper.prev();
-        if(prev != null) {
-            playSong(prev);
-        }
-    }
-    private void nextSong() {
-        queueHelper.addToHistory(queueHelper.getCurrent());
-        Song next = queueHelper.next();
-        updateQueueFragment();
-        if(next != null) {
-            playSong(next);
-        }
-    }
-
-    private void togglePlayPause() {
-        if(queueHelper.getCurrent() == null) {
-            MediaStore mediaStore = new MediaStore(getApplicationContext());
-            if(mediaStore.getSongs().size() > 0) {
-                playSong(mediaStore.getSongs().get(0));
-            }
-        }
-        else if(mediaPlayer.isPlaying()) {
-            mediaPlayer.pause();
-            playerPlayButton.setImageResource(R.drawable.ic_bigplay);
-
-        } else {
-            mediaPlayer.start();
-            playerPlayButton.setImageResource(R.drawable.ic_bigpause);
-        }
     }
 }

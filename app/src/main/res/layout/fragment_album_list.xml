@@ -7,5 +7,5 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layoutManager="LinearLayoutManager"
-    tools:context="fr.hostux.louis.koelouis.AlbumFragment"
+    tools:context=".fragments.AlbumFragment"
     tools:listitem="@layout/fragment_album" />

@@ -50,4 +50,8 @@ public class Song {
     public void setAlbum(Album album) {
         this.album = album;
     }
+
+    public int getTrack() {
+        return track;
+    }
 }

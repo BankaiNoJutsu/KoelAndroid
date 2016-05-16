@@ -1,4 +1,4 @@
-package fr.hostux.louis.koelouis;
+package fr.hostux.louis.koelouis.fragments;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -6,7 +6,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import fr.hostux.louis.koelouis.ArtistFragment.OnListFragmentInteractionListener;
+import fr.hostux.louis.koelouis.fragments.ArtistFragment.OnListFragmentInteractionListener;
+import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.models.Album;
 
 import java.util.List;

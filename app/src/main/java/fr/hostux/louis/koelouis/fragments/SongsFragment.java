@@ -1,4 +1,4 @@
-package fr.hostux.louis.koelouis;
+package fr.hostux.louis.koelouis.fragments;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -12,27 +12,22 @@ import android.view.ViewGroup;
 
 import java.util.List;
 
+import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.MediaStore;
-import fr.hostux.louis.koelouis.models.Album;
+import fr.hostux.louis.koelouis.models.Song;
 
-/**
- * A fragment representing a list of Items.
- * <p>
- * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
- * interface.
- */
-public class AlbumsFragment extends Fragment {
+public class SongsFragment extends Fragment {
 
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int columnCount = 1;
     private OnListFragmentInteractionListener listener;
 
-    public AlbumsFragment() {
+    public SongsFragment() {
     }
 
     @SuppressWarnings("unused")
-    public static AlbumsFragment newInstance(int columnCount) {
-        AlbumsFragment fragment = new AlbumsFragment();
+    public static SongsFragment newInstance(int columnCount) {
+        SongsFragment fragment = new SongsFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
         fragment.setArguments(args);
@@ -51,7 +46,7 @@ public class AlbumsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_albums_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_songs_list, container, false);
 
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
@@ -63,13 +58,13 @@ public class AlbumsFragment extends Fragment {
             }
 
             MediaStore mediaStore = new MediaStore(context);
-            List<Album> albums = mediaStore.getAlbums(null, true);
+            List<Song> songs = mediaStore.getSongs();
 
-            recyclerView.setAdapter(new AlbumsRecyclerViewAdapter(albums, listener));
+            recyclerView.setAdapter(new SongsRecyclerViewAdapter(songs, listener));
         }
 
         if(listener != null) {
-            listener.updateActivityTitle("Albums");
+            listener.updateActivityTitle("All songs");
         }
 
         return view;
@@ -77,7 +72,8 @@ public class AlbumsFragment extends Fragment {
 
     public interface OnListFragmentInteractionListener {
         void updateActivityTitle(String title);
-        void onListFragmentInteraction(Album album);
+        void setQueueAndPlay(List<Song> queue);
+        void onPopupButtonClick(Song song, View view);
     }
 
     public void setListener(OnListFragmentInteractionListener listener) {
