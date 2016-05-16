@@ -12,6 +12,7 @@ import java.util.List;
 
 import fr.hostux.louis.koelouis.models.Album;
 import fr.hostux.louis.koelouis.models.Artist;
+import fr.hostux.louis.koelouis.models.Playlist;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 
@@ -26,6 +27,8 @@ public class SQLiteHandler extends SQLiteOpenHelper {
     private static final String TABLE_ARTIST = "artist";
     private static final String TABLE_ALBUM = "album";
     private static final String TABLE_SONG = "song";
+    private static final String TABLE_PLAYLIST = "playlist";
+    private static final String TABLE_PLAYLIST_SONG = "playlist_song";
 
     private static final String KEY_ID = "id";
     private static final String KEY_NAME = "name";
@@ -39,6 +42,9 @@ public class SQLiteHandler extends SQLiteOpenHelper {
 
     private static final String KEY_ARTIST_ID = "artist_id";
     private static final String KEY_ALBUM_ID = "album_id";
+    private static final String KEY_USER_ID = "user_id";
+    private static final String KEY_PLAYLIST_ID = "playlist_id";
+    private static final String KEY_SONG_ID = "song_id";
 
 
     public SQLiteHandler(Context context) {
@@ -63,11 +69,21 @@ public class SQLiteHandler extends SQLiteOpenHelper {
                 + KEY_ID + " TEXT PRIMARY KEY, " + KEY_ALBUM_ID + " INTEGER, " + KEY_TITLE + " TEXT, " + KEY_LENGTH + " DOUBLE, " + KEY_TRACK + " INTEGER"
                 + ")";
 
+        String CREATE_PLAYLIST_TABLE = "CREATE TABLE " + TABLE_PLAYLIST + "("
+                + KEY_ID + " TEXT PRIMARY KEY, " + KEY_USER_ID + " INTEGER, " + KEY_NAME + " TEXT"
+                + ")";
+
+        String CREATE_PLAYLIST_SONG_TABLE = "CREATE TABLE " + TABLE_PLAYLIST_SONG + "("
+                + KEY_ID + " TEXT PRIMARY KEY, " + KEY_PLAYLIST_ID + " INTEGER, " + KEY_SONG_ID + " INTEGER"
+                + ")";
+
 
         db.execSQL(CREATE_USER_TABLE);
         db.execSQL(CREATE_ARTIST_TABLE);
         db.execSQL(CREATE_ALBUM_TABLE);
         db.execSQL(CREATE_SONG_TABLE);
+        db.execSQL(CREATE_PLAYLIST_TABLE);
+        db.execSQL(CREATE_PLAYLIST_SONG_TABLE);
     }
 
     // Upgrading database
@@ -153,6 +169,56 @@ public class SQLiteHandler extends SQLiteOpenHelper {
 
         long insertedId = db.insert(TABLE_SONG, null, values);
         db.close(); // Closing database connection
+    }
+
+    /**
+     * Storing song details in database
+     * */
+    public void addPlaylist(int id, int user_id, String name) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_ID, id);
+        values.put(KEY_USER_ID, user_id);
+        values.put(KEY_NAME, name);
+
+        long insertedId = db.insert(TABLE_PLAYLIST, null, values);
+        db.close(); // Closing database connection
+    }
+
+    /**
+     * Storing song details in database
+     * */
+    public void addPlaylistSong(int playlist_id, String song_id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_PLAYLIST_ID, playlist_id);
+        values.put(KEY_SONG_ID, song_id);
+
+        long insertedId = db.insert(TABLE_PLAYLIST_SONG, null, values);
+        db.close(); // Closing database connection
+    }
+
+    public User findUserById(int id) {
+        String selectQuery = "SELECT  * FROM " + TABLE_USER + " WHERE id = ?";
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(id) });
+
+        if(cursor.moveToFirst()) {
+            User user = cursorToUser(cursor);
+
+            cursor.close();
+            db.close();
+
+            return user;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
     }
 
     public User findUserByEmail(String email) {
@@ -345,6 +411,59 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         return null;
     }
 
+    public List<Song> findSongsByPlaylistId(int playlistId) {
+        String selectQuery = "SELECT * FROM " + TABLE_SONG + " s JOIN " + TABLE_PLAYLIST_SONG + " ps ON s." + KEY_ID + " = ps." + KEY_SONG_ID + " WHERE ps." + KEY_PLAYLIST_ID + " = ? ";
+        // TODO (when koel ready): ORDER BY " + KEY_TRACK + ", " + KEY_TITLE;
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(playlistId) });
+
+        ArrayList<Song> songs = new ArrayList<Song>();
+
+        if(cursor.moveToFirst()) {
+            do {
+                Song song = cursorToSong(cursor);
+                songs.add(song);
+            } while (cursor.moveToNext());
+
+            cursor.close();
+            db.close();
+
+            return songs;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
+    }
+
+    public List<Playlist> getPlaylists(int userId) {
+        String selectQuery = "SELECT  * FROM " + TABLE_PLAYLIST + " WHERE " + KEY_USER_ID + " = ? ORDER BY " + KEY_NAME;
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(userId)} );
+
+        ArrayList<Playlist> playlists = new ArrayList<Playlist>();
+
+        if(cursor.moveToFirst()) {
+            do {
+                Playlist playlist = cursorToPlaylist(cursor);
+                playlists.add(playlist);
+            } while (cursor.moveToNext());
+
+            cursor.close();
+            db.close();
+
+            return playlists;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
+    }
+
     private User cursorToUser(Cursor cursor) {
         int id = Integer.parseInt(cursor.getString(0));
         String name = cursor.getString(1);
@@ -376,5 +495,12 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         int track = cursor.getInt(4);
 
         return new Song(id, title, length, track, 0, false, album);
+    }
+    private Playlist cursorToPlaylist(Cursor cursor) {
+        int id = cursor.getInt(0);
+        User user = this.findUserById(cursor.getInt(1));
+        String name = cursor.getString(2);
+
+        return new Playlist(id, user, name);
     }
 };

@@ -39,6 +39,7 @@ public class KoelManager {
 
     private Context context;
     private String token;
+    int userId;
 
     private KoelManagerListener listener;
 
@@ -47,6 +48,7 @@ public class KoelManager {
 
         SessionManager sessionManager = new SessionManager(context);
         this.token = sessionManager.getToken();
+        this.userId = sessionManager.getUser().getId();
 
         this.listener = null;
     }
@@ -137,7 +139,21 @@ public class KoelManager {
                     }
                 }
                 if (syncPlaylists) {
+                    JSONArray playlists = jsonResponse.getJSONArray("playlists");
 
+                    for(int p = 0; p < playlists.length(); p++) {
+                        JSONObject playlist = playlists.getJSONObject(p);
+
+                        db.addPlaylist(playlist.getInt("id"), userId, playlist.getString("name"));
+
+                        JSONArray songs = playlist.getJSONArray("songs");
+
+                        for (int s = 0; s < songs.length(); s++) {
+                            String songId = songs.getString(s);
+
+                            db.addPlaylistSong(playlist.getInt("id"), songId);
+                        }
+                    }
                 }
             } catch (JSONException e) {
                 Log.e("koelManager", e.getMessage());

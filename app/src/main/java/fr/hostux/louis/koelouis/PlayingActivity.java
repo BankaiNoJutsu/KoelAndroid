@@ -1,180 +1,314 @@
 package fr.hostux.louis.koelouis;
 
-import android.annotation.SuppressLint;
-import android.app.ActionBar;
-import android.app.Activity;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.annotation.TargetApi;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.MotionEvent;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.os.SystemClock;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
-import android.view.MenuItem;
-import android.support.v4.app.NavUtils;
+import android.widget.ImageButton;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
-/**
- * An example full-screen activity that shows and hides the system UI (i.e.
- * status bar and navigation/system bar) with user interaction.
- */
-public class PlayingActivity extends Activity {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
+import fr.hostux.louis.koelouis.models.Song;
+import fr.hostux.louis.koelouis.services.PlayerService;
 
-    /**
-     * Some older devices needs a small delay between UI widget updates
-     * and a change of the status and navigation bar.
-     */
-    private static final int UI_ANIMATION_DELAY = 300;
-    private final Handler mHideHandler = new Handler();
-    private View mContentView;
-    private final Runnable mHidePart2Runnable = new Runnable() {
-        @SuppressLint("InlinedApi")
+
+public class PlayingActivity extends AppCompatActivity {
+    private final Handler handler = new Handler();
+    private static final long PROGRESS_UPDATE_INTERNAL = 1000;
+    private static final long PROGRESS_UPDATE_INITIAL_INTERVAL = 100;
+    private final Runnable updateProgressTask = new Runnable() {
         @Override
         public void run() {
-            // Delayed removal of status and navigation bar
+            updateProgress();
+        }
+    };
+    private final ScheduledExecutorService executorService =
+            Executors.newSingleThreadScheduledExecutor();
 
-            // Note that some of these constants are new as of API 16 (Jelly Bean)
-            // and API 19 (KitKat). It is safe to use them, as they are inlined
-            // at compile-time and do nothing on earlier devices.
-            mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        }
-    };
-    private View mControlsView;
-    private final Runnable mShowPart2Runnable = new Runnable() {
-        @Override
-        public void run() {
-            // Delayed display of UI elements
-            ActionBar actionBar = getActionBar();
-            if (actionBar != null) {
-                actionBar.show();
-            }
-            mControlsView.setVisibility(View.VISIBLE);
-        }
-    };
-    private boolean mVisible;
-    private final Runnable mHideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            hide();
-        }
-    };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
+    private ScheduledFuture<?> scheduleFuture;
+    private PlaybackStateCompat lastPlaybackState;
+
+    private View progressView;
+    private TextView songTitleView;
+    private TextView albumNameView;
+    private TextView artistNameView;
+    private TextView positionView;
+    private TextView lengthView;
+
+    private ImageButton playerPlayButton;
+    private ImageButton playerPrevButton;
+    private ImageButton playerNextButton;
+
+    private SeekBar seekBar;
+
+    private PlayerService playerService;
+    private MediaSessionCompat mediaSession;
+    private Intent playerServiceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_playing);
 
-        setContentView(R.layout.activity_playing2);
-        ActionBar actionBar = getActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(true);
-        }
+        progressView = findViewById(R.id.login_progress);
 
-        mVisible = true;
-        mControlsView = findViewById(R.id.fullscreen_content_controls);
-        mContentView = findViewById(R.id.fullscreen_content);
+        songTitleView = (TextView) findViewById(R.id.song_title);
+        albumNameView = (TextView) findViewById(R.id.album_name);
+        artistNameView = (TextView) findViewById(R.id.artist_name);
+        positionView = (TextView) findViewById(R.id.current_position);
+        lengthView = (TextView) findViewById(R.id.length);
+
+        playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
+        playerPlayButton = (ImageButton) findViewById(R.id.play_button);
+        playerNextButton = (ImageButton) findViewById(R.id.next_button);
 
 
-        // Set up the user interaction to manually show or hide the system UI.
-        mContentView.setOnClickListener(new View.OnClickListener() {
+        playerPlayButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggle();
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+
+                if (playerService.isPlaying()) {
+                    controls.pause();
+                } else {
+                    controls.play();
+                }
+
+                // playerService.processPlayPause();
+            }
+        });
+        playerPrevButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                controls.skipToPrevious();
+                //playerService.processPrev();
+            }
+        });
+        playerNextButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                controls.skipToNext();
+                //playerService.processNext();
             }
         });
 
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+
+        seekBar = (SeekBar) findViewById(R.id.seek_bar);
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int position, boolean b) {
+                positionView.setText(String.format("%d:%02d", position/1000/60, position/1000%60));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                stopSeekbarUpdate();
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                getSupportMediaController().getTransportControls().seekTo(seekBar.getProgress());
+                scheduleSeekbarUpdate();
+            }
+        });
+    }
+
+
+    private ServiceConnection playerConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            PlayerService.PlayerBinder binder = (PlayerService.PlayerBinder)iBinder;
+            playerService = binder.getService();
+
+            mediaSession = playerService.getMediaSession();
+            try {
+                connectToSession(mediaSession.getSessionToken());
+            } catch(RemoteException e) {
+                Log.e("main", "could not connect to media controller");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if(playerServiceIntent == null) {
+            playerServiceIntent = new Intent(this, PlayerService.class);
+            startService(playerServiceIntent);
+            bindService(playerServiceIntent, playerConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100);
+    protected void onDestroy() {
+        stopSeekbarUpdate();
+        super.onDestroy();
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == android.R.id.home) {
-            // This ID represents the Home or Up button.
-            NavUtils.navigateUpFromSameTask(this);
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void toggle() {
-        if (mVisible) {
-            hide();
-        } else {
-            show();
-        }
-    }
-
-    private void hide() {
-        // Hide UI first
-        ActionBar actionBar = getActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
-        mControlsView.setVisibility(View.GONE);
-        mVisible = false;
-
-        // Schedule a runnable to remove the status and navigation bar after a delay
-        mHideHandler.removeCallbacks(mShowPart2Runnable);
-        mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
-    }
-
-    @SuppressLint("InlinedApi")
-    private void show() {
-        // Show the system bar
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        mVisible = true;
-
-        // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
-        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
-    }
 
     /**
-     * Schedules a call to hide() in [delay] milliseconds, canceling any
-     * previously scheduled calls.
+     * Shows the progress UI and hides the login form.
      */
-    private void delayedHide(int delayMillis) {
-        mHideHandler.removeCallbacks(mHideRunnable);
-        mHideHandler.postDelayed(mHideRunnable, delayMillis);
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+    public void showProgress(final boolean show) {
+        // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
+        // for very easy animations. If available, use these APIs to fade-in
+        // the progress spinner.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            int shortAnimTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
+
+            progressView.setVisibility(show ? View.VISIBLE : View.GONE);
+            progressView.animate().setDuration(shortAnimTime).alpha(
+                    show ? 1 : 0).setListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    progressView.setVisibility(show ? View.VISIBLE : View.GONE);
+                }
+            });
+        } else {
+            // The ViewPropertyAnimator APIs are not available, so simply show
+            // and hide the relevant UI components.
+            progressView.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
     }
+
+
+    private final MediaControllerCompat.Callback mediaControllerCallback = new MediaControllerCompat.Callback() {
+        @Override
+        public void onPlaybackStateChanged(PlaybackStateCompat state) {
+            Log.d("main", "onPlaybackstate changed");
+            updatePlaybackState(state);
+        }
+
+        @Override
+        public void onMetadataChanged(MediaMetadataCompat metadata) {
+            if (metadata != null) {
+                updateMetadata(metadata);
+            }
+        }
+    };
+
+    private void connectToSession(MediaSessionCompat.Token token) throws RemoteException {
+        MediaControllerCompat mediaController = new MediaControllerCompat(
+                PlayingActivity.this, token);
+
+        setSupportMediaController(mediaController);
+        mediaController.registerCallback(mediaControllerCallback);
+        PlaybackStateCompat state = mediaController.getPlaybackState();
+        updatePlaybackState(state);
+        MediaMetadataCompat metadata = mediaController.getMetadata();
+        if (metadata != null) {
+            updateMetadata(metadata);
+        }
+        updateProgress();
+        if (state != null && (state.getState() == PlaybackStateCompat.STATE_PLAYING ||
+                state.getState() == PlaybackStateCompat.STATE_BUFFERING)) {
+            scheduleSeekbarUpdate();
+        }
+    }
+
+
+    private void updatePlaybackState(PlaybackStateCompat state) {
+        if(state == null) {
+            return;
+        }
+
+        lastPlaybackState = state;
+
+        if(state.getState() == PlaybackStateCompat.STATE_PLAYING) {
+            showProgress(false);
+            scheduleSeekbarUpdate();
+            playerPlayButton.setImageResource(R.drawable.ic_bigpause);
+        } else if(state.getState() == PlaybackStateCompat.STATE_BUFFERING) {
+            showProgress(true);
+            stopSeekbarUpdate();
+        } else {
+            stopSeekbarUpdate();
+            showProgress(false);
+            playerPlayButton.setImageResource(R.drawable.ic_bigplay);
+        }
+    }
+
+    private void updateProgress() {
+        if(lastPlaybackState == null) {
+            return;
+        }
+
+        long currentPosition = lastPlaybackState.getPosition();
+
+        if(lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
+            long timeDelta = SystemClock.elapsedRealtime() - lastPlaybackState.getLastPositionUpdateTime();
+            currentPosition += (int) timeDelta * lastPlaybackState.getPlaybackSpeed();
+
+            Log.d("main", "Current position:" + Integer.toString((int) currentPosition));
+        }
+
+        seekBar.setProgress((int) currentPosition);
+    }
+
+
+    private void scheduleSeekbarUpdate() {
+        stopSeekbarUpdate();
+        if (!executorService.isShutdown()) {
+            scheduleFuture = executorService.scheduleAtFixedRate(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            handler.post(updateProgressTask);
+                        }
+                    }, PROGRESS_UPDATE_INITIAL_INTERVAL,
+                    PROGRESS_UPDATE_INTERNAL, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void stopSeekbarUpdate() {
+        if (scheduleFuture != null) {
+            scheduleFuture.cancel(false);
+        }
+    }
+
+    private void updateMetadata(MediaMetadataCompat metadata) {
+        Song currentSong = playerService.getCurrent();
+        if(currentSong != null) {
+            artistNameView.setText(currentSong.getAlbum().getArtist().getName());
+            songTitleView.setText(currentSong.getTitle());
+            lengthView.setText(currentSong.getReadableLength());
+            seekBar.setProgress(0);
+            seekBar.setMax((int) currentSong.getLength() * 1000);
+        } else {
+            artistNameView.setText("-");
+            songTitleView.setText("-");
+        }
+    }
+
 }

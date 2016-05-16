@@ -6,6 +6,7 @@ import java.util.List;
 
 import fr.hostux.louis.koelouis.models.Album;
 import fr.hostux.louis.koelouis.models.Artist;
+import fr.hostux.louis.koelouis.models.Playlist;
 import fr.hostux.louis.koelouis.models.Song;
 
 /**
@@ -78,7 +79,30 @@ public class MediaStore {
     public List<Song> getSongs() {
         return db.getSongs();
     }
-    public List<Song> getSongs(int albumId) {
+    public List<Song> getSongsByAlbum(int albumId) {
         return db.findSongsByAlbumId(albumId);
+    }
+    public List<Song> getSongsByPlaylist(int playlistId) {
+        return db.findSongsByPlaylistId(playlistId);
+    }
+
+    public List<Playlist> getPlaylists(int userId) {
+        return this.getPlaylists(userId, false);
+    }
+
+    public List<Playlist> getPlaylists(int userId, boolean withSongs) {
+        List<Playlist> playlists = db.getPlaylists(userId);
+
+
+        if(playlists != null && withSongs) {
+            for(int p=0; p < playlists.size(); p++) {
+                Playlist playlist = playlists.get(p);
+
+                List<Song> songs = db.findSongsByPlaylistId(playlist.getId());
+                playlist.setSongs(songs);
+            }
+        }
+
+        return playlists;
     }
 }

@@ -1,8 +1,14 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:tag="fragmentPlaying">
+    android:layout_height="match_parent">
+
+    <ProgressBar
+        android:id="@+id/login_progress"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"/>
 
     <ImageView
         android:id="@+id/album_cover"
@@ -56,7 +62,42 @@
         android:scrollHorizontally="true"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:gravity="center"
-        android:layout_above="@+id/layout_buttons"/>
+        android:layout_above="@+id/seek_layout"/>
+
+    <LinearLayout
+        android:padding="12dp"
+        android:orientation="horizontal"
+        android:id="@+id/seek_layout"
+        android:layout_above="@+id/layout_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/current_position"
+            android:text="00:00"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textAppearance="?android:attr/textAppearance"
+            android:gravity="center"/>
+
+        <SeekBar
+            android:id="@+id/seek_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/length"
+            android:text="00:00"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textAppearance="?android:attr/textAppearance"
+            android:gravity="center" />
+    </LinearLayout>
+
 
     <LinearLayout
         android:id="@+id/layout_buttons"

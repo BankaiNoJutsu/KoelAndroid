@@ -74,7 +74,7 @@
                     android:orientation="horizontal"
                     android:gravity="center"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                    android:layout_height="wrap_content">
 
                     <ImageButton
                         android:id="@+id/prev_button"
@@ -117,6 +117,18 @@
                         android:paddingBottom="0dp"
                         android:layout_marginLeft="12dp" />
                 </LinearLayout>
+                <ProgressBar
+                    android:id="@+id/progress_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="0"
+                    android:indeterminate="false"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginBottom="-6dp" />
+
+                <!-- TODO: dirty -->
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

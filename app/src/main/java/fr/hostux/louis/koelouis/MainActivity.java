@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.media.MediaMetadataCompat;
@@ -28,11 +29,11 @@ import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,14 +45,16 @@ import fr.hostux.louis.koelouis.fragments.AlbumsFragment;
 import fr.hostux.louis.koelouis.fragments.ArtistFragment;
 import fr.hostux.louis.koelouis.fragments.ArtistsFragment;
 import fr.hostux.louis.koelouis.fragments.HomeFragment;
+import fr.hostux.louis.koelouis.fragments.PlaylistFragment;
+import fr.hostux.louis.koelouis.fragments.PlaylistsFragment;
 import fr.hostux.louis.koelouis.fragments.QueueFragment;
 import fr.hostux.louis.koelouis.fragments.SettingsFragment;
 import fr.hostux.louis.koelouis.fragments.SongsFragment;
 import fr.hostux.louis.koelouis.helper.KoelManager;
-import fr.hostux.louis.koelouis.helper.QueueHelper;
 import fr.hostux.louis.koelouis.helper.SessionManager;
 import fr.hostux.louis.koelouis.models.Album;
 import fr.hostux.louis.koelouis.models.Artist;
+import fr.hostux.louis.koelouis.models.Playlist;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 import fr.hostux.louis.koelouis.services.PlayerService;
@@ -69,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     private ArtistsFragment artistsFragment;
     private AlbumsFragment albumsFragment;
     private SongsFragment songsFragment;
+    private PlaylistsFragment playlistsFragment;
     private SettingsFragment settingsFragment;
 
     private String[] drawerItemsTitles;
@@ -84,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton playerPlayButton;
     private ImageButton playerPrevButton;
     private ImageButton playerNextButton;
+    private ProgressBar progressBar;
 
 
     private final Handler handler = new Handler();
@@ -115,90 +120,97 @@ public class MainActivity extends AppCompatActivity {
 
         SessionManager sessionManager = new SessionManager(getApplicationContext());
         if(!sessionManager.isLoggedIn()) {
-            Intent loginIntent = new Intent(getApplicationContext(), LoginActivity.class);
+            Intent loginIntent = new Intent(this, LoginActivity.class);
+            loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(loginIntent);
-        }
+        } else {
 
-        if(savedInstanceState == null) {
-            user = sessionManager.getUser();
-            koelManager = new KoelManager(getApplicationContext());
+            if (savedInstanceState == null) {
+                user = sessionManager.getUser();
+                koelManager = new KoelManager(getApplicationContext());
 
-            koelManager.setListener(new KoelManager.KoelManagerListener() {
-                @Override
-                public void onDataSync(boolean success) {
-                    showProgress(true);
-                }
-                @Override
-                public void onDataSyncOver(boolean success) {
-                    Toast.makeText(getApplicationContext(), "Data has just been synced with server! Enjoy!", Toast.LENGTH_SHORT).show();
-                    showProgress(false);
-                }
-                // TODO: remettre ça
+                koelManager.setListener(new KoelManager.KoelManagerListener() {
+                    @Override
+                    public void onDataSync(boolean success) {
+                        showProgress(true);
+                    }
+
+                    @Override
+                    public void onDataSyncOver(boolean success) {
+                        Toast.makeText(getApplicationContext(), "Data has just been synced with server! Enjoy!", Toast.LENGTH_SHORT).show();
+                        showProgress(false);
+                    }
+                    // TODO: remettre ça
                 /*
                 @Override
                 public void onDataSyncError(int errorNumber) {
                     Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n° " + Integer.toString(errorNumber) + ").", Toast.LENGTH_SHORT).show();
                 }*/
-            });
-        }
-
-        progressView = findViewById(R.id.login_progress);
-        artistNameView = (TextView) findViewById(R.id.player_artist);
-        songTitleView = (TextView) findViewById(R.id.player_song);
-
-        playerControls = (LinearLayout) findViewById(R.id.player_controls);
-        albumLayout = (LinearLayout) findViewById(R.id.album_layout);
-
-        albumLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // TODO: intent playing activity
+                });
             }
-        });
 
-        playerPlayButton = (ImageButton) findViewById(R.id.play_button);
-        playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
-        playerNextButton = (ImageButton) findViewById(R.id.next_button);
+            progressView = findViewById(R.id.login_progress);
+            artistNameView = (TextView) findViewById(R.id.player_artist);
+            songTitleView = (TextView) findViewById(R.id.player_song);
 
-        playerPlayButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+            playerControls = (LinearLayout) findViewById(R.id.player_controls);
+            albumLayout = (LinearLayout) findViewById(R.id.album_layout);
 
-                if(playerService.isPlaying()) {
-                    controls.pause();
-                } else {
-                    controls.play();
+            albumLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Intent playingActivityIntent = new Intent(MainActivity.this, PlayingActivity.class);
+                    startActivity(playingActivityIntent);
                 }
+            });
 
-                // playerService.processPlayPause();
-            }
-        });
-        playerPrevButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
-                controls.skipToPrevious();
-                //playerService.processPrev();
-            }
-        });
-        playerNextButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
-                controls.skipToNext();
-                //playerService.processNext();
-            }
-        });
+            playerPlayButton = (ImageButton) findViewById(R.id.play_button);
+            playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
+            playerNextButton = (ImageButton) findViewById(R.id.next_button);
 
-        makeApplicationDrawer();
+            playerPlayButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
 
-        makeFragments();
+                    if (playerService.isPlaying()) {
+                        controls.pause();
+                    } else {
+                        controls.play();
+                    }
+
+                    // playerService.processPlayPause();
+                }
+            });
+            playerPrevButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                    controls.skipToPrevious();
+                    //playerService.processPrev();
+                }
+            });
+            playerNextButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    MediaControllerCompat.TransportControls controls = getSupportMediaController().getTransportControls();
+                    controls.skipToNext();
+                    //playerService.processNext();
+                }
+            });
+
+            progressBar = (ProgressBar) findViewById(R.id.progress_bar);
+
+            makeApplicationDrawer();
+
+            makeFragments();
+        }
     }
 
     @Override
     protected void onDestroy() {
         stopSeekbarUpdate();
+        stopService(playerServiceIntent);
         super.onDestroy();
     }
 
@@ -218,6 +230,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+
         }
     };
 
@@ -352,6 +365,39 @@ public class MainActivity extends AppCompatActivity {
                 setTitle(title);
             }
         };
+
+        final PlaylistFragment.OnListFragmentInteractionListener playlistFragmentListener = new PlaylistFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void setQueueAndPlay(List<Song> queue) {
+                playerService.processSetQueueAndPlay(queue);
+            }
+
+            @Override
+            public void onPopupButtonClick(Song song, View view) {
+                createPopupMenu(song, view);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+        final PlaylistsFragment.OnListFragmentInteractionListener playlistsFragmentListener = new PlaylistsFragment.OnListFragmentInteractionListener() {
+            @Override
+            public void onListFragmentInteraction(Playlist playlist) {
+                PlaylistFragment playlistFragment = PlaylistFragment.newInstance(1, playlist.getId(), playlist.getName());
+
+                playlistFragment.setListener(playlistFragmentListener);
+
+                changeFragment(playlistFragment, true);
+            }
+
+            @Override
+            public void updateActivityTitle(String title) {
+                setTitle(title);
+            }
+        };
+
         final SettingsFragment.OnFragmentInteractionListener settingsFragmentListener = new SettingsFragment.OnFragmentInteractionListener() {
             @Override
             public void onRequestDataSync() {
@@ -383,6 +429,10 @@ public class MainActivity extends AppCompatActivity {
         songsFragment = SongsFragment.newInstance(1);
         songsFragment.setListener(songsFragmentListener);
         songsFragment.setRetainInstance(true);
+
+        playlistsFragment = PlaylistsFragment.newInstance(1, user.getId());
+        playlistsFragment.setListener(playlistsFragmentListener);
+        playlistsFragment.setRetainInstance(true);
 
         settingsFragment = SettingsFragment.newInstance();
         settingsFragment.setListener(settingsFragmentListener);
@@ -466,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
 
             // PLAYLISTS
             case 5:
-                fragment = homeFragment;
+                fragment = playlistsFragment;
                 break;
 
             // SETTINGS
@@ -574,7 +624,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateProgress() {
-        Log.d("main", "update");
+        if(lastPlaybackState == null) {
+            return;
+        }
+
+        long currentPosition = lastPlaybackState.getPosition();
+
+        if(lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
+            long timeDelta = SystemClock.elapsedRealtime() - lastPlaybackState.getLastPositionUpdateTime();
+            currentPosition += (int) timeDelta * lastPlaybackState.getPlaybackSpeed();
+
+            Log.d("main", "Current position:" + Integer.toString((int) currentPosition));
+        }
+
+        progressBar.setProgress((int) currentPosition);
     }
 
 
@@ -603,6 +666,7 @@ public class MainActivity extends AppCompatActivity {
         if(currentSong != null) {
             artistNameView.setText(currentSong.getAlbum().getArtist().getName());
             songTitleView.setText(currentSong.getTitle());
+            progressBar.setMax((int) currentSong.getLength() * 1000);
         } else {
             artistNameView.setText("-");
             songTitleView.setText("-");

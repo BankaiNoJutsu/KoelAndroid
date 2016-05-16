@@ -16,27 +16,27 @@ import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.MediaStore;
 import fr.hostux.louis.koelouis.models.Song;
 
-public class AlbumFragment extends Fragment {
+public class PlaylistFragment extends Fragment {
 
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int columnCount = 1;
-    private static final String ARG_ALBUM_ID = "albumId";
-    private int albumId;
-    private static final String ARG_ALBUM_NAME = "albumName";
-    private String albumName;
+    private static final String ARG_PLAYLIST_ID = "playlistId";
+    private int playlistId;
+    private static final String ARG_PLAYLIST_NAME = "playlistName";
+    private String playlistName;
 
 
     private OnListFragmentInteractionListener listener;
 
-    public AlbumFragment() {
+    public PlaylistFragment() {
     }
 
-    public static AlbumFragment newInstance(int columnCount, int albumId, String albumName) {
-        AlbumFragment fragment = new AlbumFragment();
+    public static PlaylistFragment newInstance(int columnCount, int playlistId, String playlistName) {
+        PlaylistFragment fragment = new PlaylistFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
-        args.putInt(ARG_ALBUM_ID, albumId);
-        args.putString(ARG_ALBUM_NAME, albumName);
+        args.putInt(ARG_PLAYLIST_ID, playlistId);
+        args.putString(ARG_PLAYLIST_NAME, playlistName);
         fragment.setArguments(args);
         return fragment;
     }
@@ -47,15 +47,15 @@ public class AlbumFragment extends Fragment {
 
         if (getArguments() != null) {
             columnCount = getArguments().getInt(ARG_COLUMN_COUNT);
-            albumId = getArguments().getInt(ARG_ALBUM_ID);
-            albumName = getArguments().getString(ARG_ALBUM_NAME);
+            playlistId = getArguments().getInt(ARG_PLAYLIST_ID);
+            playlistName = getArguments().getString(ARG_PLAYLIST_NAME);
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_album_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_playlist_list, container, false);
 
         // Set the adapter
         if (view instanceof RecyclerView) {
@@ -68,13 +68,13 @@ public class AlbumFragment extends Fragment {
             }
 
             MediaStore mediaStore = new MediaStore(context);
-            List<Song> songs = mediaStore.getSongsByAlbum(albumId);
+            List<Song> songs = mediaStore.getSongsByPlaylist(playlistId);
 
-            recyclerView.setAdapter(new AlbumRecyclerViewAdapter(songs, listener));
+            recyclerView.setAdapter(new PlaylistRecyclerViewAdapter(songs, listener));
         }
 
         if(listener != null) {
-            listener.updateActivityTitle(albumName);
+            listener.updateActivityTitle(playlistName);
         }
 
         return view;

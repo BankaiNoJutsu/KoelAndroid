@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import fr.hostux.louis.koelouis.Config;
+import fr.hostux.louis.koelouis.PlayingActivity;
 import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.MediaStore;
 import fr.hostux.louis.koelouis.helper.QueueHelper;
@@ -32,7 +33,7 @@ import fr.hostux.louis.koelouis.helper.SessionManager;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 
-public class PlayerService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, AudioManager.OnAudioFocusChangeListener {
+public class PlayerService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener, AudioManager.OnAudioFocusChangeListener {
     public static final String ACTION_PLAY = "action_play";
     public static final String ACTION_PAUSE = "action_pause";
     public static final String ACTION_NEXT = "action_next";
@@ -51,6 +52,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     enum State {
         Stopped,
+        Buffering,
         Preparing,
         Playing,
         Paused
@@ -96,6 +98,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     @Override
     public void onDestroy() {
         stopForeground(true);
+        notificationManager.cancel(NOTIFY_ID);
         super.onDestroy();
     }
 
@@ -140,6 +143,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
             mediaController.getTransportControls().skipToNext();
         } else if( action.equalsIgnoreCase( ACTION_STOP ) ) {
             mediaController.getTransportControls().stop();
+            stopSelf();
         }
     }
 
@@ -155,10 +159,13 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     private void buildNotification( Notification.Action action ) {
         Notification.MediaStyle style = new Notification.MediaStyle();
 
-        /*
-        Intent intent = new Intent( getApplicationContext(), PlayerService.class );
-        intent.setAction( ACTION_STOP );
-        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 1, intent, 0);*/
+
+        Intent stopIntent = new Intent( getApplicationContext(), PlayerService.class );
+        stopIntent.setAction( ACTION_STOP );
+        PendingIntent stopPendingIntent = PendingIntent.getService(getApplicationContext(), 1, stopIntent, 0);
+
+        Intent playingIntent = new Intent( getApplicationContext(), PlayingActivity.class );
+        PendingIntent playingPendingIntent = PendingIntent.getActivity(getApplicationContext(), 1, playingIntent, 0);
 
 
         String songTitle = "-";
@@ -168,13 +175,16 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
             artistName = getCurrent().getAlbum().getArtist().getName();
         }
 
+        boolean ongoing = (state == State.Playing);
+
         Notification.Builder builder = new Notification.Builder( this )
                 .setSmallIcon(R.drawable.logo)
-                .setOngoing(true)
+                .setOngoing(ongoing)
                 .setContentTitle(songTitle)
                 .setContentText(artistName)
-                // .setDeleteIntent( pendingIntent )
-                .setStyle(style);
+                .setDeleteIntent( stopPendingIntent )
+                .setStyle(style)
+                .setContentIntent(playingPendingIntent);
 
         builder.addAction( generateAction(R.drawable.ic_prev, "Previous", ACTION_PREVIOUS ) );
         builder.addAction( action );
@@ -208,6 +218,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
             player.setOnPreparedListener(this);
             player.setOnCompletionListener(this);
             player.setOnErrorListener(this);
+            player.setOnSeekCompleteListener(this);
 
             player.setVolume(1.0f, 1.0f);
         }
@@ -282,7 +293,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
              */
             @Override
             public void onSeekTo(long pos) {
-                Log.d("player", "onSeekTo");
+                processSeekTo(pos);
 
                 super.onSeekTo(pos);
             }
@@ -348,13 +359,23 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     @Override
     public void onCompletion(MediaPlayer mediaPlayer) {
-        nextSong();
+        Log.d("player", "on completion");
+
+        if(state == State.Playing) {
+            nextSong();
+        }
     }
 
     @Override
     public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
         player.reset();
         return false;
+    }
+
+    @Override
+    public void onSeekComplete(MediaPlayer mediaPlayer) {
+        state = State.Playing;
+        updateMediaSessionState();
     }
 
     public boolean isPlaying() {
@@ -396,8 +417,13 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         return queueHelper.getCurrent();
     }
 
-    public void processSeek(int position) {
+    public void processSeekTo(long position) {
+        if(isPlaying()) {
+            player.seekTo((int) position);
+            state = State.Buffering;
 
+            updateMediaSessionState();
+        }
     }
     public void processPlaySong(Song song) {
         playSong(song);
@@ -454,6 +480,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     }
 
     private void startPlayer() {
+        Log.d("player", "startPlayer");
         requestAudioFocus();
 
         if(audioFocus == AudioFocus.NoFocusNoDuck) {
@@ -514,6 +541,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         }
     }
     private void nextSong() {
+        Log.d("player", "nextSong()");
         queueHelper.addToHistory(queueHelper.getCurrent());
         Song next = queueHelper.next();
 
@@ -554,6 +582,10 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                 break;
 
             case Preparing:
+                playbackState = PlaybackStateCompat.STATE_BUFFERING;
+                break;
+
+            case Buffering:
                 playbackState = PlaybackStateCompat.STATE_BUFFERING;
                 break;
 

@@ -31,16 +31,7 @@
             android:enabled="true"
             android:exported="true" />
 
-        <activity
-            android:name=".PlayingActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:label="@string/title_activity_playing"
-            android:parentActivityName=".MainActivity"
-            android:theme="@style/FullscreenTheme">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="fr.hostux.louis.koelouis.MainActivity" />
-        </activity>
+        <activity android:name=".PlayingActivity"></activity>
     </application>
 
 </manifest>
