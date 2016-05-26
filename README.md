@@ -18,6 +18,11 @@ WIP - the final purpose is to have a basic native Android client for phanan/koel
 
 ## What's to improve
 
+- Choose koel API URL dynamically (or when signing in)
 - PlayerService : a bit messy...
 - UI
 - When there's a lot of artists/albums/songs, UI is too long to respond (when changing fragments, loading of lists should be asynchronous?)
+- Add shuffle mode, repetition
+- Pre-buffer songs in queue (in case of losing Internet connection, it'll keep the songs playing)
+- Add an "save offline" function
+- Manage playlists (offline and with sync online)
