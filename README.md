@@ -20,3 +20,4 @@ NOT WORKING YET - the final purpose is to have a basic native Android client for
 
 - PlayerService : a bit messy...
 - UI
+- When there's a lot of artists/albums/songs, UI is too long to respond (when changing fragments, loading of lists should be asynchronous?)
