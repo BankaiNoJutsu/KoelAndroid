@@ -1,5 +1,5 @@
 # KoelAndroid
-NOT WORKING YET - the final purpose is to have a basic native Android client for phanan/koel (great) app.
+WIP - the final purpose is to have a basic native Android client for phanan/koel (great) app.
 
 ## What's working
 
