@@ -43,8 +43,10 @@ public class SettingsFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_settings, container, false);
         Button syncData = (Button) rootView.findViewById(R.id.buttonSyncData);
+        Button buttonLogout = (Button) rootView.findViewById(R.id.buttonLogout);
 
         syncData.setOnClickListener(syncDataHandler);
+        buttonLogout.setOnClickListener(logout);
 
         if(listener != null) {
             listener.updateActivityTitle("Koelouis settings");
@@ -61,9 +63,19 @@ public class SettingsFragment extends Fragment {
         }
     };
 
+    View.OnClickListener logout = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            if(listener != null) {
+                listener.onRequestLogout();
+            }
+        }
+    };
+
     public interface OnFragmentInteractionListener {
         void updateActivityTitle(String title);
         void onRequestDataSync();
+        void onRequestLogout();
     }
 
     public void setListener(OnFragmentInteractionListener listener) {

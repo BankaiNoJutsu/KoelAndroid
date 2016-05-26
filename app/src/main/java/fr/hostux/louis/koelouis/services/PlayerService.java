@@ -10,8 +10,13 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -20,6 +25,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,7 +39,7 @@ import fr.hostux.louis.koelouis.helper.SessionManager;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 
-public class PlayerService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener, AudioManager.OnAudioFocusChangeListener {
+public class PlayerService extends MediaBrowserServiceCompat implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener, AudioManager.OnAudioFocusChangeListener {
     public static final String ACTION_PLAY = "action_play";
     public static final String ACTION_PAUSE = "action_pause";
     public static final String ACTION_NEXT = "action_next";
@@ -76,6 +82,8 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     private NotificationManager notificationManager;
     int NOTIFY_ID = 27;
+
+    private String MEDIA_ID_ROOT = "__ROOT__";
 
 
     public PlayerService() {
@@ -198,6 +206,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     }
     
     private void requestAudioFocus() {
+        Log.d("player", "requestAudioFocus");
         int result = audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
 
         if(result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
@@ -226,6 +235,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     
     public void initMediaSession() {
         mediaSession = new MediaSessionCompat(getApplicationContext(), "koelouis");
+        setSessionToken(mediaSession.getSessionToken());
         mediaController = mediaSession.getController();
 
         mediaSession.setCallback(new MediaSessionCompat.Callback() {
@@ -261,7 +271,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                 Log.d("player", "onNext");
 
                 super.onSkipToNext();
-                nextSong();
+                processNext();
             }
 
             /**
@@ -272,7 +282,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                 Log.d("player", "onPrev");
 
                 super.onSkipToPrevious();
-                prevSong();
+                processPrev();
             }
 
             /**
@@ -298,6 +308,22 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                 super.onSeekTo(pos);
             }
         });
+
+
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+
+        mediaSession.setActive(true);
+    }
+
+    @Override
+    public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, @Nullable Bundle rootHints) {
+        return new BrowserRoot(MEDIA_ID_ROOT, null);
+    }
+
+    @Override
+    public void onLoadChildren(@NonNull String parentId, @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
+        result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>());
     }
 
     public MediaSessionCompat getMediaSession() {
@@ -312,39 +338,43 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     @Override
     public void onAudioFocusChange(int focusChange) {
+        Log.d("player","onAudioFocusChange");
         switch(focusChange) {
             case AudioManager.AUDIOFOCUS_GAIN:
+                Log.d("player","AUDIOFOCUS_GAIN");
                 audioFocus = AudioFocus.Focused;
 
                 if(player == null) {
                     initPlayer();
                 }
                 else if(!isPlaying() && pauseReason == PauseReason.FocusLoss) {
-                    startPlayer();
+                    processPlay();
                 }
                 player.setVolume(1.0f, 1.0f);
                 break;
 
             // For an unbounded amount of time : we release
             case AudioManager.AUDIOFOCUS_LOSS:
+                Log.d("player","AUDIOFOCUS_LOSS");
                 audioFocus = AudioFocus.NoFocusNoDuck;
 
-                player.release();
-                player = null;
+                releasePlayer();
                 break;
 
             // For a short time, have to stop
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                Log.d("player","AUDIOFOCUS_LOSS_TRANSIENT");
                 audioFocus = AudioFocus.NoFocusNoDuck;
 
                 if(isPlaying()) {
-                    pausePlayer();
+                    processPause(true);
                     pauseReason = PauseReason.FocusLoss;
                 }
                 break;
 
             // For a short time but we can continue
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                Log.d("player","AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK");
                 audioFocus = AudioFocus.NoFocusCanDuck;
 
                 player.setVolume(DUCK_VOLUME, DUCK_VOLUME);
@@ -369,6 +399,10 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     @Override
     public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
         player.reset();
+
+        state = State.Stopped;
+        updateMediaSessionMetadata();
+        updateMediaSessionState();
         return false;
     }
 
@@ -450,23 +484,34 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
             startPlayer();
         }
     }
-    public void processPause() {
+    public void processPause(boolean keepFocus) {
         if(!isPlaying()) {
             Log.d("player", "processPause while not playing");
             return;
         } else {
-            pausePlayer();
+            pausePlayer(keepFocus);
         }
     }
+    public void processPause() {
+        processPause(false);
+    }
     public void processPrev() {
-        prevSong();
+        if(isPlaying() && player.getCurrentPosition() < player.getDuration() * 2 / 100 && getCurrent().getLength() > 4) {
+            processSeekTo(0);
+        } else {
+            prevSong();
+        }
     }
     public void processNext() {
         nextSong();
     }
 
-    private void pausePlayer() {
+    private void pausePlayer(boolean keepFocus) {
         player.pause();
+        if(!keepFocus) {
+            Log.d("player", "we don't want to keep focus");
+            audioManager.abandonAudioFocus(this);
+        }
         state = State.Paused;
         updateMediaSessionState();
         buildNotification(generateAction(R.drawable.ic_bigplay, "Play", ACTION_PLAY));
@@ -474,9 +519,19 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     private void stopPlayer() {
         player.reset();
+        audioManager.abandonAudioFocus(this);
         state = State.Stopped;
         updateMediaSessionState();
+        updateMediaSessionMetadata();
+        queueHelper.setCurrent(null);
         notificationManager.cancel(NOTIFY_ID);
+    }
+
+    private void releasePlayer() {
+        stopPlayer();
+
+        player.release();
+        player = null;
     }
 
     private void startPlayer() {
@@ -494,6 +549,11 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         }
 
         if(queueHelper.getCurrent() != null) {
+            if(state == State.Stopped) {
+                playSong(queueHelper.getCurrent());
+                return;
+            }
+
             player.start();
             state = State.Playing;
             buildNotification(generateAction(R.drawable.ic_bigpause, "Pause", ACTION_PAUSE));
@@ -593,7 +653,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                 playbackState = PlaybackStateCompat.STATE_NONE;
         }
 
-        PlaybackStateCompat playbackStateCompat = builder.setState(playbackState, player.getCurrentPosition(), 1.0f).build();
+        PlaybackStateCompat playbackStateCompat = builder.setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_SEEK_TO | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS).setState(playbackState, player.getCurrentPosition(), 1.0f).build();
         mediaSession.setPlaybackState(playbackStateCompat);
     }
 }

@@ -10,4 +10,10 @@
         android:layout_height="wrap_content"
         android:text="@string/syncDataButton"/>
 
+    <Button
+        android:id="@+id/buttonLogout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/logoutButton"
+        android:layout_gravity="right|top" />
 </FrameLayout>

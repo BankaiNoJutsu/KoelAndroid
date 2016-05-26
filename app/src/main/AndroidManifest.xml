@@ -29,9 +29,20 @@
         <service
             android:name=".services.PlayerService"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true"
+            >
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
 
-        <activity android:name=".PlayingActivity"></activity>
+        <activity android:name=".PlayingActivity" />
+
+        <receiver android:name="android.support.v4.media.session.MediaButtonReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

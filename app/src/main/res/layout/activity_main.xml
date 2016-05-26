@@ -28,13 +28,13 @@
             android:background="@color/colorPrimary"
             android:id="@+id/player_controls"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="75dp">
 
             <LinearLayout
                 android:id="@+id/album_layout"
                 android:background="@color/mainBackground"
                 android:orientation="vertical"
-                android:layout_width="wrap_content"
+                android:layout_width="75dp"
                 android:layout_height="match_parent">
 
                 <TextView
@@ -42,10 +42,17 @@
                     android:paddingLeft="5dp"
                     android:paddingRight="5dp"
                     android:id="@+id/player_artist"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:text="-"/>
+                    android:text="-"
+                    android:singleLine="true"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit ="marquee_forever"
+                    android:scrollHorizontally="true"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
 
                 <ImageView
                     android:src="@drawable/ic_song"
@@ -65,10 +72,17 @@
                     android:paddingLeft="5dp"
                     android:paddingRight="5dp"
                     android:id="@+id/player_song"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearance"
-                    android:text="-"/>
+                    android:text="-"
+                    android:singleLine="true"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit ="marquee_forever"
+                    android:scrollHorizontally="true"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
 
                 <LinearLayout
                     android:orientation="horizontal"

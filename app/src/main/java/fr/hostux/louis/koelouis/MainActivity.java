@@ -408,6 +408,18 @@ public class MainActivity extends AppCompatActivity {
             public void updateActivityTitle(String title) {
                 setTitle(title);
             }
+
+            @Override
+            public void onRequestLogout() {
+                SessionManager sessionManager = new SessionManager(getApplicationContext());
+                sessionManager.logoutUser();
+
+                if(!sessionManager.isLoggedIn()) {
+                    Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+                    loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(loginIntent);
+                }
+            }
         };
 
         homeFragment = HomeFragment.newInstance(user);
@@ -633,8 +645,6 @@ public class MainActivity extends AppCompatActivity {
         if(lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
             long timeDelta = SystemClock.elapsedRealtime() - lastPlaybackState.getLastPositionUpdateTime();
             currentPosition += (int) timeDelta * lastPlaybackState.getPlaybackSpeed();
-
-            Log.d("main", "Current position:" + Integer.toString((int) currentPosition));
         }
 
         progressBar.setProgress((int) currentPosition);

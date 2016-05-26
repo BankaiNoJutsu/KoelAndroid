@@ -39,4 +39,6 @@
     <string name="title_activity_playing">PlayingActivity</string>
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
+
+    <string name="logoutButton">Logout</string>
 </resources>

@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -253,7 +254,7 @@ public class PlayingActivity extends AppCompatActivity {
             showProgress(true);
             stopSeekbarUpdate();
         } else {
-            stopSeekbarUpdate();
+            stopSeekbarUpdate();git
             showProgress(false);
             playerPlayButton.setImageResource(R.drawable.ic_bigplay);
         }
@@ -269,8 +270,6 @@ public class PlayingActivity extends AppCompatActivity {
         if(lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
             long timeDelta = SystemClock.elapsedRealtime() - lastPlaybackState.getLastPositionUpdateTime();
             currentPosition += (int) timeDelta * lastPlaybackState.getPlaybackSpeed();
-
-            Log.d("main", "Current position:" + Integer.toString((int) currentPosition));
         }
 
         seekBar.setProgress((int) currentPosition);
