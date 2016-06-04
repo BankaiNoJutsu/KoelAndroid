@@ -254,7 +254,7 @@ public class PlayingActivity extends AppCompatActivity {
             showProgress(true);
             stopSeekbarUpdate();
         } else {
-            stopSeekbarUpdate();git
+            stopSeekbarUpdate();
             showProgress(false);
             playerPlayButton.setImageResource(R.drawable.ic_bigplay);
         }

@@ -351,6 +351,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
                     processPlay();
                 }
                 player.setVolume(1.0f, 1.0f);
+                pauseReason = PauseReason.UserRequest;
                 break;
 
             // For an unbounded amount of time : we release
@@ -620,10 +621,10 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentSong.getAlbum().getArtist().getName());
         builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentSong.getAlbum().getName());
         builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentSong.getTitle());
+        builder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, currentSong.getTrack());
+        builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentSong.getLengthMs());
 
         mediaSession.setMetadata(builder.build());
-        // length
-        // track number
     } private void updateMediaSessionState() {
         PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder();
 

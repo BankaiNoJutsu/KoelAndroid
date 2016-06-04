@@ -10,26 +10,31 @@
     <ImageView
         android:src="@drawable/ic_artist"
         android:id="@+id/artist_image"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
         android:layout_centerVertical="true" />
 
-    <TextView
-        android:id="@+id/artist_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <LinearLayout
         android:layout_marginLeft="@dimen/text_margin"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:layout_toRightOf="@id/artist_image"
-        android:text="Artist name"/>
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@+id/artist_image">
 
-    <TextView
-        android:id="@+id/artist_albumCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/text_margin"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="n albums"
-        android:layout_below="@+id/artist_name"
-        android:layout_toEndOf="@+id/artist_image" />
+        <TextView
+            android:id="@+id/artist_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="Artist name"/>
+
+        <TextView
+            android:id="@+id/artist_albumCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="n albums" />
+    </LinearLayout>
 </RelativeLayout>

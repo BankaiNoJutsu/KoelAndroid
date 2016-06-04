@@ -115,7 +115,12 @@ public class KoelManager {
                     for (int a = 0; a < artists.length(); a++) {
                         JSONObject artist = artists.getJSONObject(a);
 
-                        db.addArtist(artist.getInt("id"), artist.getString("name"), artist.getString("image"));
+                        String image = null;
+                        if(!artist.isNull("image")) {
+                            image = artist.getString("image");
+                        }
+
+                        db.addArtist(artist.getInt("id"), artist.getString("name"), image);
 
                         if (syncAlbums) {
                             JSONArray albums = artist.getJSONArray("albums");

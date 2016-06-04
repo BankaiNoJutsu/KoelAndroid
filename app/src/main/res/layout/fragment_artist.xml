@@ -10,26 +10,31 @@
     <ImageView
         android:src="@drawable/ic_album"
         android:id="@+id/album_cover"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
         android:layout_centerVertical="true" />
 
-    <TextView
-        android:id="@+id/album_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <LinearLayout
         android:layout_marginLeft="@dimen/text_margin"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:layout_toRightOf="@id/album_cover"
-        android:text="Album name"/>
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@+id/album_cover">
 
-    <TextView
-        android:id="@+id/album_songCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="@dimen/text_margin"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="n songs"
-        android:layout_below="@+id/album_name"
-        android:layout_toEndOf="@+id/album_cover" />
+        <TextView
+            android:id="@+id/album_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="Album name"/>
+
+        <TextView
+            android:id="@+id/album_songCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="n songs"/>
+    </LinearLayout>
 </RelativeLayout>

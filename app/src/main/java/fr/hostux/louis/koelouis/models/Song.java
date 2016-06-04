@@ -38,6 +38,10 @@ public class Song {
         return length;
     }
 
+    public int getLengthMs() {
+        return (int) Math.round(length * 1000);
+    }
+
     public String getReadableLength() {
         int intLength = (int) Math.round(length);
         return String.format("%d:%02d", intLength/60, intLength%60);

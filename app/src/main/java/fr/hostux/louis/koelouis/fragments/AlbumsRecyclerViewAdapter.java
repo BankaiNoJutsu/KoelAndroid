@@ -1,10 +1,15 @@
 package fr.hostux.louis.koelouis.fragments;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
@@ -22,10 +27,12 @@ public class AlbumsRecyclerViewAdapter extends RecyclerView.Adapter<AlbumsRecycl
 
     private final List<Album> albums;
     private final OnListFragmentInteractionListener listener;
+    private final Context context;
 
     private MediaStore mediaStore;
 
-    public AlbumsRecyclerViewAdapter(List<Album> albums, OnListFragmentInteractionListener listener) {
+    public AlbumsRecyclerViewAdapter(Context context, List<Album> albums, OnListFragmentInteractionListener listener) {
+        this.context = context;
         this.albums = albums;
         this.listener = listener;
     }
@@ -44,6 +51,8 @@ public class AlbumsRecyclerViewAdapter extends RecyclerView.Adapter<AlbumsRecycl
         holder.album = album;
         holder.albumNameView.setText(album.getName());
         holder.albumAlbumCountView.setText(album.getSongCount() + " songs");
+
+        Picasso.with(context).load(album.getCoverUri()).into(holder.albumCoverView);
 
         holder.view.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -67,6 +76,7 @@ public class AlbumsRecyclerViewAdapter extends RecyclerView.Adapter<AlbumsRecycl
         public final View view;
         public final TextView albumNameView;
         public final TextView albumAlbumCountView;
+        public final ImageView albumCoverView;
         public Album album;
 
         public ViewHolder(View view) {
@@ -74,6 +84,7 @@ public class AlbumsRecyclerViewAdapter extends RecyclerView.Adapter<AlbumsRecycl
             this.view = view;
             albumNameView = (TextView) view.findViewById(R.id.album_name);
             albumAlbumCountView = (TextView) view.findViewById(R.id.album_songCount);
+            albumCoverView = (ImageView) view.findViewById(R.id.album_cover);
         }
     }
 }

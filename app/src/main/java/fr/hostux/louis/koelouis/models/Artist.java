@@ -42,4 +42,8 @@ public class Artist {
     public void setAlbums(List<Album> albums) {
         this.albums = albums;
     }
+
+    public String getImageUri() {
+        return image;
+    }
 }

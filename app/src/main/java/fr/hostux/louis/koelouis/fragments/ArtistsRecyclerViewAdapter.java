@@ -1,10 +1,15 @@
 package fr.hostux.louis.koelouis.fragments;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
@@ -22,12 +27,14 @@ public class ArtistsRecyclerViewAdapter extends RecyclerView.Adapter<ArtistsRecy
 
     private final List<Artist> artists;
     private final OnListFragmentInteractionListener listener;
+    private final Context context;
 
     private MediaStore mediaStore;
 
-    public ArtistsRecyclerViewAdapter(List<Artist> artists, OnListFragmentInteractionListener listener) {
+    public ArtistsRecyclerViewAdapter(Context context, List<Artist> artists, OnListFragmentInteractionListener listener) {
         this.artists = artists;
         this.listener = listener;
+        this.context = context;
     }
 
     @Override
@@ -44,6 +51,13 @@ public class ArtistsRecyclerViewAdapter extends RecyclerView.Adapter<ArtistsRecy
         holder.artist = artist;
         holder.artistNameView.setText(artist.getName());
         holder.artistAlbumCountView.setText(artist.getAlbumCount() + " albums");
+
+        if(artist.getImageUri() != null && !artist.getImageUri().isEmpty()) {
+            Picasso.with(context).load(artist.getImageUri()).into(holder.artistImageView);
+        } else if(artist.getAlbumCount() > 0) {
+            String albumCoverUri = artist.getAlbums().get(0).getCoverUri();
+            Picasso.with(context).load(albumCoverUri).into(holder.artistImageView);
+        }
 
         holder.view.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -67,6 +81,7 @@ public class ArtistsRecyclerViewAdapter extends RecyclerView.Adapter<ArtistsRecy
         public final View view;
         public final TextView artistNameView;
         public final TextView artistAlbumCountView;
+        public final ImageView artistImageView;
         public Artist artist;
 
         public ViewHolder(View view) {
@@ -74,6 +89,7 @@ public class ArtistsRecyclerViewAdapter extends RecyclerView.Adapter<ArtistsRecy
             this.view = view;
             artistNameView = (TextView) view.findViewById(R.id.artist_name);
             artistAlbumCountView = (TextView) view.findViewById(R.id.artist_albumCount);
+            artistImageView = (ImageView) view.findViewById(R.id.artist_image);
         }
     }
 }

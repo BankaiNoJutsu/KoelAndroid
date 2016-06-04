@@ -2,6 +2,7 @@
     <string name="app_name">Koelouis</string>
 
     <!-- Strings related to login -->
+    <string name="prompt_base_url">Koel URL (ex: https://koel.com)</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password</string>
     <string name="action_sign_in">Log in</string>

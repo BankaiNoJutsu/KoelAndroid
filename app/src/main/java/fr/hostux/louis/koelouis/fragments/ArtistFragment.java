@@ -70,7 +70,7 @@ public class ArtistFragment extends Fragment {
             MediaStore mediaStore = new MediaStore(context);
             List<Album> albums = mediaStore.getAlbums(artistId, true);
 
-            recyclerView.setAdapter(new ArtistRecyclerViewAdapter(albums, listener));
+            recyclerView.setAdapter(new ArtistRecyclerViewAdapter(getContext(), albums, listener));
         }
 
         if(listener != null) {

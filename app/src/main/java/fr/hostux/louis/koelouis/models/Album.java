@@ -2,6 +2,7 @@ package fr.hostux.louis.koelouis.models;
 
 import java.util.List;
 
+import fr.hostux.louis.koelouis.Config;
 import fr.hostux.louis.koelouis.models.Artist;
 
 /**
@@ -53,5 +54,9 @@ public class Album {
 
     public void setArtist(Artist artist) {
         this.artist = artist;
+    }
+
+    public String getCoverUri() {
+        return cover;
     }
 }
