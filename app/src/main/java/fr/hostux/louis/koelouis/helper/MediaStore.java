@@ -52,13 +52,13 @@ public class MediaStore {
 
 
     public List<Album> getAlbums() {
-        return this.getAlbums(null, false);
+        return this.getAlbums(0, false);
     }
 
-    public List<Album> getAlbums(String artistId, boolean withSongs) {
+    public List<Album> getAlbums(int artistId, boolean withSongs) {
         List<Album> albums = null;
 
-        if(artistId == null) {
+        if(artistId == 0) {
             albums = db.getAlbums();
         } else {
             albums = db.findAlbumsByArtistId(artistId);
@@ -82,6 +82,9 @@ public class MediaStore {
     public List<Song> getSongsByAlbum(int albumId) {
         return db.findSongsByAlbumId(albumId);
     }
+    public List<Song> getSongsByArtist(int artistId) {
+        return db.findSongsByArtistId(artistId);
+    }
     public List<Song> getSongsByPlaylist(int playlistId) {
         return db.findSongsByPlaylistId(playlistId);
     }
@@ -104,5 +107,12 @@ public class MediaStore {
         }
 
         return playlists;
+    }
+
+    public List<Song> getSongsByAlbum(Album album) {
+        return getSongsByAlbum(album.getId());
+    }
+    public List<Song> getSongsByArtist(Artist artist) {
+        return getSongsByArtist(artist.getId());
     }
 }

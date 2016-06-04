@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import fr.hostux.louis.koelouis.Config;
 import fr.hostux.louis.koelouis.PlayingActivity;
@@ -39,10 +40,12 @@ import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.MediaStore;
 import fr.hostux.louis.koelouis.helper.QueueHelper;
 import fr.hostux.louis.koelouis.helper.SessionManager;
+import fr.hostux.louis.koelouis.models.Album;
+import fr.hostux.louis.koelouis.models.Artist;
 import fr.hostux.louis.koelouis.models.Song;
 import fr.hostux.louis.koelouis.models.User;
 
-public class PlayerService extends MediaBrowserServiceCompat implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener, AudioManager.OnAudioFocusChangeListener {
+public class PlayerService extends MediaBrowserServiceCompat implements QueueHelper.OnQueueChangedListener, MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener, AudioManager.OnAudioFocusChangeListener {
     public static final String ACTION_PLAY = "action_play";
     public static final String ACTION_PAUSE = "action_pause";
     public static final String ACTION_NEXT = "action_next";
@@ -55,7 +58,6 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
     private AudioManager audioManager;
 
     private MediaSessionCompat mediaSession;
-    private MediaMetadataCompat.Builder mediaSessionBuilder;
     private MediaControllerCompat mediaController;
 
     private final IBinder playerBind = new PlayerBinder();
@@ -118,7 +120,8 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
     public void onCreate() {
         super.onCreate();
         initPlayer();
-        queueHelper = new QueueHelper();
+        queueHelper = new QueueHelper(new MediaStore(getApplicationContext()));
+        queueHelper.setListener(this);
 
         user = new SessionManager(getApplicationContext()).getUser();
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -417,6 +420,19 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         updateMediaSessionState();
     }
 
+    @Override
+    public void updateQueue(List<Song> newQueue) {
+        List<MediaSessionCompat.QueueItem> queue = new ArrayList<>();
+        int count = 0;
+
+        for(Song song : newQueue) {
+            MediaSessionCompat.QueueItem queueItem = new MediaSessionCompat.QueueItem(convertSongToMediaMetadata(song).getDescription(), count++);
+            queue.add(queueItem);
+        }
+
+        mediaSession.setQueue(queue);
+    }
+
     public boolean isPlaying() {
         if(state == State.Playing) {
             return true;
@@ -428,12 +444,8 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         return player.getDuration();
     }
 
-    public LinkedList<Song> getQueue() {
+    public List<Song> getQueue() {
         return queueHelper.getQueue();
-    }
-
-    public void setQueueListener(QueueHelper.OnQueueChangedListener listener) {
-        queueHelper.setListener(listener);
     }
 
     public void clearQueue() {
@@ -465,12 +477,14 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         }
     }
     public void processPlaySong(Song song) {
-        playSong(song);
+        queueHelper.clearAndAdd(song);
     }
 
-    public void processSetQueueAndPlay(List<Song> queue) {
-        queueHelper.setQueue(new LinkedList<Song>(queue));
-        playSong(queueHelper.next());
+    public void playArtist(Artist artist) {
+        queueHelper.clearAndAddArtist(artist);
+    }
+    public void playAlbum(Album album) {
+        queueHelper.clearAndAddAlbum(album);
     }
 
     public void processPlayPause() {
@@ -479,6 +493,16 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         } else {
             processPlay();
         }
+    }
+
+    public void processSetQueueAndPlay(List<Song> queue) {
+        queueHelper.clearAndAdd(queue);
+        playSong();
+    }
+
+    public void processSkipToQueuePosition(int position) {
+        queueHelper.setCurrentPosition(position);
+        playSong();
     }
 
     // TODO: use states
@@ -501,7 +525,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         processPause(false);
     }
     public void processPrev() {
-        if(isPlaying() && player.getCurrentPosition() < player.getDuration() * 2 / 100 && getCurrent().getLength() > 4) {
+        if(isPlaying() && player.getCurrentPosition() > player.getDuration() * 2 / 100 && getCurrent().getLength() > 4) {
             processSeekTo(0);
         } else {
             prevSong();
@@ -528,7 +552,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
         state = State.Stopped;
         updateMediaSessionState();
         updateMediaSessionMetadata();
-        queueHelper.setCurrent(null);
+        queueHelper.clearQueue();
         notificationManager.cancel(NOTIFY_ID);
     }
 
@@ -555,7 +579,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
 
         if(queueHelper.getCurrent() != null) {
             if(state == State.Stopped) {
-                playSong(queueHelper.getCurrent());
+                playSong();
                 return;
             }
 
@@ -565,17 +589,16 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
             updateMediaSessionState();
         }
         else {
-            MediaStore mediaStore = new MediaStore(getApplicationContext());
-            if(mediaStore.getSongs().size() > 0) {
-                playSong(mediaStore.getSongs().get(0));
-            }
+            queueHelper.addAllSongs();
         }
     }
 
 
-    private void playSong(Song song) {
+
+    private void playSong() {
         player.reset();
-        queueHelper.addNext(song);
+
+        Song song = queueHelper.getCurrent();
 
         String endpoint = Config.API_URL + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
         Log.d("main", endpoint);
@@ -587,7 +610,6 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
             player.prepareAsync();
             state = State.Preparing;
 
-            queueHelper.setCurrent(queueHelper.next());
             updateMediaSessionMetadata();
             updateMediaSessionState();
             buildNotification(generateAction(R.drawable.ic_bigpause, "Pause", ACTION_PAUSE));
@@ -599,42 +621,26 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
     }
 
     private void prevSong() {
-        queueHelper.addNext(queueHelper.getCurrent());
-        Song prev = queueHelper.prev();
-        if(prev != null) {
-            playSong(prev);
-        }
+        queueHelper.skip(-1);
+        playSong();
     }
     private void nextSong() {
-        Log.d("player", "nextSong()");
-        queueHelper.addToHistory(queueHelper.getCurrent());
-        Song next = queueHelper.next();
-
-        if(next != null) {
-            playSong(next);
-        } else {
-            queueHelper.setCurrent(null);
-        }
+        queueHelper.skip(1);
+        playSong();
     }
 
-
     private void updateMediaSessionMetadata() {
-        mediaSessionBuilder = new MediaMetadataCompat.Builder();
+        final Song currentSong = queueHelper.getCurrent();
 
-        Song currentSong = queueHelper.getCurrent();
-        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentSong.getAlbum().getArtist().getName());
-        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentSong.getAlbum().getName());
-        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentSong.getTitle());
-        mediaSessionBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, currentSong.getTrack());
-        mediaSessionBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentSong.getLengthMs());
+        mediaSession.setMetadata(convertSongToMediaMetadata(currentSong));
 
-        mediaSession.setMetadata(mediaSessionBuilder.build());
-
+        // TODO: album cover
+        /*
         Picasso.with(this).load(currentSong.getAlbum().getCoverUri()).into(new Target() {
             @Override
             public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-                mediaSessionBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
-                mediaSession.setMetadata(mediaSessionBuilder.build());
+                builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
+                mediaSession.setMetadata(builder.build());
             }
 
             @Override
@@ -646,8 +652,9 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
             public void onPrepareLoad(Drawable placeHolderDrawable) {
 
             }
-        });
-    } private void updateMediaSessionState() {
+        });*/
+    }
+    private void updateMediaSessionState() {
         PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder();
 
         int playbackState;
@@ -678,5 +685,18 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
 
         PlaybackStateCompat playbackStateCompat = builder.setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_SEEK_TO | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS).setState(playbackState, player.getCurrentPosition(), 1.0f).build();
         mediaSession.setPlaybackState(playbackStateCompat);
+    }
+
+    private MediaMetadataCompat convertSongToMediaMetadata(Song song) {
+        MediaMetadataCompat.Builder builder = new MediaMetadataCompat.Builder();
+
+        builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.getAlbum().getArtist().getName());
+        builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.getAlbum().getName());
+        builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.getTitle());
+        builder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, song.getTrack());
+        builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.getLengthMs());
+        builder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, song.getId());
+
+        return builder.build();
     }
 }

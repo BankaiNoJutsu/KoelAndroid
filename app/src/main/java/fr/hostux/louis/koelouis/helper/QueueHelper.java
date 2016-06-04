@@ -1,74 +1,99 @@
 package fr.hostux.louis.koelouis.helper;
 
-import java.util.Deque;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
+import fr.hostux.louis.koelouis.models.Album;
+import fr.hostux.louis.koelouis.models.Artist;
 import fr.hostux.louis.koelouis.models.Song;
 
 /**
  * Created by louis on 14/05/16.
  */
 public class QueueHelper {
-    private Song current;
-    private LinkedList<Song> queue;
-    private LinkedList<Song> history;
     private OnQueueChangedListener listener;
+    private List<Song> queue;
+    private int currentIndex;
+    private MediaStore mediaStore;
 
-    public QueueHelper() {
-        queue = new LinkedList<Song>();
-        history = new LinkedList<Song>();
+    public QueueHelper(MediaStore mediaStore) {
+        queue = new ArrayList<Song>();
+        currentIndex = 0;
+        this.mediaStore = mediaStore;
     }
 
     public void addNext(Song song) {
-        queue.offerFirst(song);
+        int nextIndex = currentIndex + 1;
+
+        if(nextIndex < 0) { nextIndex = 0; } // Si inférieur à 0, on le met en première position
+        if(nextIndex > queue.size()) { add(song); return; } // Si supérieur à la liste, alors on l'ajoute à la fin
+
+        queue.add(nextIndex, song);
 
         if(listener != null) {
             listener.updateQueue(queue);
         }
     }
+
     public void add(Song song) {
-        queue.offer(song);
+        queue.add(song);
 
         if(listener != null) {
             listener.updateQueue(queue);
         }
+    }
+
+    public void add(List<Song> songs) {
+        queue.addAll(songs);
+
+        if(listener != null) {
+            listener.updateQueue(queue);
+        }
+    }
+
+    public void clearAndAdd(Song song) {
+        clearQueue(false);
+        add(song);
+    }
+    public void clearAndAdd(List<Song> songs) {
+        clearQueue(false);
+        add(songs);
     }
 
     public Song getCurrent() {
-        return current;
-    }
-
-    public void setCurrent(Song current) {
-        this.current = current;
-    }
-
-    // Retrieves and removes head of queue
-    // return null if empty
-    public Song next() {
-        if(listener != null) {
-            listener.updateQueue(queue);
+        if(currentIndex < 0) {
+            return null;
         }
 
-        return queue.poll();
-    }
-    public Song prev() {
-        if(listener != null) {
-            listener.updateQueue(queue);
-        }
-
-        return history.poll();
+        return queue.get(currentIndex);
     }
 
-    public void addToHistory(Song song) {
-        history.offer(song);
+    public int getCurrentIndex() {
+        return currentIndex;
     }
 
-    public void clearHistory() {
-        history.clear();
+    public void setCurrentPosition(int newPos) {
+        if(newPos < 0) { newPos = 0; }
+        if(newPos > queue.size()) { newPos = queue.size(); }
+
+        currentIndex = newPos;
     }
 
-    public LinkedList<Song> getQueue() {
+    public List<Song> getQueue() {
         return queue;
+    }
+
+    public void skip(int amount) {
+        int index = currentIndex + amount;
+        if (index < 0) {
+            index = 0;
+        } else {
+            // skip forwards when in last song will cycle back to start of the queue
+            index %= queue.size();
+        }
+
+        currentIndex = index;
     }
 
     public void removeFromQueue(int position) {
@@ -80,23 +105,42 @@ public class QueueHelper {
     }
 
     public void clearQueue() {
-        queue.clear();
+        clearQueue(true);
+    }
 
-        if(listener != null) {
+    public void clearQueue(boolean callListener) {
+        queue.clear();
+        currentIndex = 0;
+
+        if(callListener && listener != null) {
             listener.updateQueue(queue);
         }
     }
 
-    public void setQueue(LinkedList<Song> queue) {
-        this.queue = queue;
-
-        if(listener != null) {
-            listener.updateQueue(queue);
-        }
+    public void clearAndAddAllSongs() {
+        clearQueue(false);
+        addAllSongs();
+    }
+    public void clearAndAddArtist(Artist artist) {
+        clearQueue(false);
+        addArtist(artist);
+    }
+    public void clearAndAddAlbum(Album album) {
+        clearQueue(false);
+        addAlbum(album);
+    }
+    public void addAllSongs() {
+        add(mediaStore.getSongs());
+    }
+    public void addArtist(Artist artist) {
+        add(mediaStore.getSongsByArtist(artist));
+    }
+    public void addAlbum(Album album) {
+        add(mediaStore.getSongsByAlbum(album));
     }
 
     public interface OnQueueChangedListener {
-        public void updateQueue(LinkedList<Song> newQueue);
+        void updateQueue(List<Song> newQueue);
     }
 
     public void setListener(OnQueueChangedListener listener) {

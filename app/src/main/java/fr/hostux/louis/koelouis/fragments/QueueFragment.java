@@ -3,6 +3,7 @@ package fr.hostux.louis.koelouis.fragments;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.LinkedList;
+import java.util.List;
 
 import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.QueueHelper;
@@ -58,8 +60,9 @@ public class QueueFragment extends Fragment {
                 recyclerView.setLayoutManager(new GridLayoutManager(context, columnCount));
             }
 
-            LinkedList<Song> songs = null;
-            adapter = new QueueRecyclerViewAdapter(songs, listener);
+            List<MediaSessionCompat.QueueItem> songs = getActivity().getSupportMediaController().getQueue();
+
+            adapter = new QueueRecyclerViewAdapter(getContext(), songs, listener);
             recyclerView.setAdapter(adapter);
         }
 
@@ -78,9 +81,5 @@ public class QueueFragment extends Fragment {
 
     public void setListener(OnListFragmentInteractionListener listener) {
         this.listener = listener;
-    }
-
-    public QueueRecyclerViewAdapter getAdapter() {
-        return adapter;
     }
 }

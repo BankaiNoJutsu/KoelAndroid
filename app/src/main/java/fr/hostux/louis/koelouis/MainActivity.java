@@ -280,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
         final QueueFragment.OnListFragmentInteractionListener queueFragmentListener = new QueueFragment.OnListFragmentInteractionListener() {
             @Override
             public void onListFragmentInteraction(Song song, int position) {
-                //playerService.processPlaySong(song);
+                playerService.processSkipToQueuePosition(position);
             }
 
             @Override
@@ -491,7 +491,6 @@ public class MainActivity extends AppCompatActivity {
                 switch (item.getItemId()) {
                     case R.id.removeFromQueueButton:
                         playerService.removeFromQueue(position);
-                        //requestUpdateQueueFragment();
                         break;
                 }
 

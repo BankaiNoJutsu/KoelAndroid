@@ -21,7 +21,7 @@ public class ArtistFragment extends Fragment {
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int columnCount = 1;
     private static final String ARG_ARTIST_ID = "artistId";
-    private String artistId;
+    private int artistId;
     private static final String ARG_ARTIST_NAME = "artistName";
     private String artistName;
 
@@ -31,11 +31,11 @@ public class ArtistFragment extends Fragment {
     public ArtistFragment() {
     }
 
-    public static ArtistFragment newInstance(int columnCount, String artistId, String artistName) {
+    public static ArtistFragment newInstance(int columnCount, int artistId, String artistName) {
         ArtistFragment fragment = new ArtistFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
-        args.putString(ARG_ARTIST_ID, artistId);
+        args.putInt(ARG_ARTIST_ID, artistId);
         args.putString(ARG_ARTIST_NAME, artistName);
         fragment.setArguments(args);
         return fragment;
@@ -47,7 +47,7 @@ public class ArtistFragment extends Fragment {
 
         if (getArguments() != null) {
             columnCount = getArguments().getInt(ARG_COLUMN_COUNT);
-            artistId = getArguments().getString(ARG_ARTIST_ID);
+            artistId = getArguments().getInt(ARG_ARTIST_ID);
             artistName = getArguments().getString(ARG_ARTIST_NAME);
         }
     }

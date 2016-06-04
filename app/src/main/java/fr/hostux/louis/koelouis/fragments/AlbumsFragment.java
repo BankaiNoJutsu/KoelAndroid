@@ -64,7 +64,7 @@ public class AlbumsFragment extends Fragment {
             }
 
             MediaStore mediaStore = new MediaStore(context);
-            List<Album> albums = mediaStore.getAlbums(null, true);
+            List<Album> albums = mediaStore.getAlbums(0, true);
 
             recyclerView.setAdapter(new AlbumsRecyclerViewAdapter(getContext(), albums, listener));
         }

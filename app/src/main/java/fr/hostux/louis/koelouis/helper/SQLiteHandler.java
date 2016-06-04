@@ -334,11 +334,11 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         return null;
     }
 
-    public List<Album> findAlbumsByArtistId(String artistId) {
+    public List<Album> findAlbumsByArtistId(int artistId) {
         String selectQuery = "SELECT * FROM " + TABLE_ALBUM + " WHERE " + KEY_ARTIST_ID + " = ? ORDER BY " + KEY_NAME;
 
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery(selectQuery, new String[] { artistId });
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(artistId) });
 
         ArrayList<Album> albums = new ArrayList<Album>();
 
@@ -385,6 +385,51 @@ public class SQLiteHandler extends SQLiteOpenHelper {
 
         return null;
     }
+
+    public Song findSongById(String id) {
+        String selectQuery = "SELECT  * FROM " + TABLE_SONG + " WHERE " + KEY_ID + " = ?";
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { id });
+
+        Song song = null;
+
+        if(cursor.moveToFirst()) {
+            song = cursorToSong(cursor);
+        }
+
+        cursor.close();
+        db.close();
+
+        return song;
+    }
+
+    public List<Song> findSongsByArtistId(int artistId) {
+        String selectQuery = "SELECT * FROM " + TABLE_SONG + " s JOIN " + TABLE_ALBUM + " al ON s.album_id = al.id WHERE al." + KEY_ARTIST_ID + " = ? ORDER BY " + KEY_TITLE;
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, new String[] { Integer.toString(artistId) });
+
+        ArrayList<Song> songs = new ArrayList<Song>();
+
+        if(cursor.moveToFirst()) {
+            do {
+                Song song = cursorToSong(cursor);
+                songs.add(song);
+            } while (cursor.moveToNext());
+
+            cursor.close();
+            db.close();
+
+            return songs;
+        }
+
+        cursor.close();
+        db.close();
+
+        return null;
+    }
+
     public List<Song> findSongsByAlbumId(int albumId) {
         String selectQuery = "SELECT * FROM " + TABLE_SONG + " WHERE " + KEY_ALBUM_ID + " = ? ORDER BY " + KEY_TRACK + ", " + KEY_TITLE;
 
@@ -473,7 +518,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         return new User(id, name, email, isAdmin);
     }
     private Artist cursorToArtist(Cursor cursor) {
-        String id = cursor.getString(0);
+        int id = cursor.getInt(0);
         String name = cursor.getString(1);
         String image = cursor.getString(2);
 

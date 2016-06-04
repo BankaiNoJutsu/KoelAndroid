@@ -1,5 +1,7 @@
 package fr.hostux.louis.koelouis.fragments;
 
+import android.content.Context;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,16 +15,19 @@ import java.util.List;
 import fr.hostux.louis.koelouis.fragments.QueueFragment.OnListFragmentInteractionListener;
 import fr.hostux.louis.koelouis.R;
 import fr.hostux.louis.koelouis.helper.MediaStore;
+import fr.hostux.louis.koelouis.helper.SQLiteHandler;
 import fr.hostux.louis.koelouis.models.Song;
 
 public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecyclerViewAdapter.ViewHolder> {
 
-    private List<Song> queue;
+    private List<MediaSessionCompat.QueueItem> queue;
     private final OnListFragmentInteractionListener listener;
+    private final Context context;
 
-    public QueueRecyclerViewAdapter(List<Song> queue, OnListFragmentInteractionListener listener) {
+    public QueueRecyclerViewAdapter(Context context, List<MediaSessionCompat.QueueItem> queue, OnListFragmentInteractionListener listener) {
         this.queue = queue;
         this.listener = listener;
+        this.context = context;
     }
 
     @Override
@@ -34,7 +39,11 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, final int position) {
-        Song song = queue.get(position);
+        MediaSessionCompat.QueueItem queueItem = queue.get(position);
+
+        SQLiteHandler db = new SQLiteHandler(context);
+
+        Song song = db.findSongById(queueItem.getDescription().getMediaId());
 
         holder.song = song;
         holder.songTitleView.setText(song.getTitle());
@@ -87,10 +96,5 @@ public class QueueRecyclerViewAdapter extends RecyclerView.Adapter<QueueRecycler
             songLengthView = (TextView) view.findViewById(R.id.song_length);
             popupMenuButton = (ImageButton) view.findViewById(R.id.queue_button_popupMenu);
         }
-    }
-
-
-    public void updateQueue(LinkedList<Song> queue) {
-        this.queue = queue;
     }
 }
