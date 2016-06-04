@@ -6,7 +6,7 @@ WIP - the final purpose is to have a basic native Android client for phanan/koel
 - Sync between koel app and Android app
 - Browse by artist, album, all songs, playlists
 - Play songs (quite useful for a music player)
-- Queue system
+- Queue system (but needs refactoring)
 - Remote controls (from headseat, car, ...) and information (not tested yet, but should work)
 - Album covers, artists images...
 
@@ -15,6 +15,7 @@ WIP - the final purpose is to have a basic native Android client for phanan/koel
 - Current queue : the view isn't working (but songs added to queue will play normally)
 - Ability to choose view between "list mode" and "tiles mode" (artists, albums)
 - Not displaying track number (but songs should be ordered in priority by their track number in an album)
+- Previous song functionnality --> needs queue rewriting
 
 ## What's to improve
 

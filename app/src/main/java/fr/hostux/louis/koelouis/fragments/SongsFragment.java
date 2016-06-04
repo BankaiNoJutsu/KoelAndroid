@@ -48,20 +48,18 @@ public class SongsFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_songs_list, container, false);
 
-        if (view instanceof RecyclerView) {
-            Context context = view.getContext();
-            RecyclerView recyclerView = (RecyclerView) view;
-            if (columnCount <= 1) {
-                recyclerView.setLayoutManager(new LinearLayoutManager(context));
-            } else {
-                recyclerView.setLayoutManager(new GridLayoutManager(context, columnCount));
-            }
-
-            MediaStore mediaStore = new MediaStore(context);
-            List<Song> songs = mediaStore.getSongs();
-
-            recyclerView.setAdapter(new SongsRecyclerViewAdapter(songs, listener));
+        Context context = view.getContext();
+        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.list);
+        if (columnCount <= 1) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(context));
+        } else {
+            recyclerView.setLayoutManager(new GridLayoutManager(context, columnCount));
         }
+
+        MediaStore mediaStore = new MediaStore(context);
+        List<Song> songs = mediaStore.getSongs();
+
+        recyclerView.setAdapter(new SongsRecyclerViewAdapter(getContext(), songs, listener));
 
         if(listener != null) {
             listener.updateActivityTitle("All songs");

@@ -27,11 +27,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
     private LinearLayout playerControls;
     private LinearLayout albumLayout;
+    private ImageView albumCoverView;
     private TextView artistNameView;
     private TextView songTitleView;
     private ImageButton playerPlayButton;
@@ -150,13 +154,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             progressView = findViewById(R.id.login_progress);
+            albumCoverView = (ImageView) findViewById(R.id.album_cover);
             artistNameView = (TextView) findViewById(R.id.player_artist);
             songTitleView = (TextView) findViewById(R.id.player_song);
 
             playerControls = (LinearLayout) findViewById(R.id.player_controls);
-            albumLayout = (LinearLayout) findViewById(R.id.album_layout);
 
-            albumLayout.setOnClickListener(new View.OnClickListener() {
+            playerControls.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     Intent playingActivityIntent = new Intent(MainActivity.this, PlayingActivity.class);
@@ -677,9 +681,12 @@ public class MainActivity extends AppCompatActivity {
             artistNameView.setText(currentSong.getAlbum().getArtist().getName());
             songTitleView.setText(currentSong.getTitle());
             progressBar.setMax((int) currentSong.getLength() * 1000);
+            Picasso.with(getApplicationContext()).load(currentSong.getAlbum().getCoverUri()).into(albumCoverView);
+
         } else {
             artistNameView.setText("-");
             songTitleView.setText("-");
+            albumCoverView.setImageResource(R.drawable.ic_song);
         }
     }
 

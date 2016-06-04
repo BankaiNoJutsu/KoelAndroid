@@ -3,9 +3,10 @@ package fr.hostux.louis.koelouis.services;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -24,9 +25,11 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -52,6 +55,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
     private AudioManager audioManager;
 
     private MediaSessionCompat mediaSession;
+    private MediaMetadataCompat.Builder mediaSessionBuilder;
     private MediaControllerCompat mediaController;
 
     private final IBinder playerBind = new PlayerBinder();
@@ -615,16 +619,34 @@ public class PlayerService extends MediaBrowserServiceCompat implements MediaPla
 
 
     private void updateMediaSessionMetadata() {
-        MediaMetadataCompat.Builder builder = new MediaMetadataCompat.Builder();
+        mediaSessionBuilder = new MediaMetadataCompat.Builder();
 
         Song currentSong = queueHelper.getCurrent();
-        builder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentSong.getAlbum().getArtist().getName());
-        builder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentSong.getAlbum().getName());
-        builder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentSong.getTitle());
-        builder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, currentSong.getTrack());
-        builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentSong.getLengthMs());
+        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentSong.getAlbum().getArtist().getName());
+        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentSong.getAlbum().getName());
+        mediaSessionBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentSong.getTitle());
+        mediaSessionBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, currentSong.getTrack());
+        mediaSessionBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, currentSong.getLengthMs());
 
-        mediaSession.setMetadata(builder.build());
+        mediaSession.setMetadata(mediaSessionBuilder.build());
+
+        Picasso.with(this).load(currentSong.getAlbum().getCoverUri()).into(new Target() {
+            @Override
+            public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                mediaSessionBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
+                mediaSession.setMetadata(mediaSessionBuilder.build());
+            }
+
+            @Override
+            public void onBitmapFailed(Drawable errorDrawable) {
+
+            }
+
+            @Override
+            public void onPrepareLoad(Drawable placeHolderDrawable) {
+
+            }
+        });
     } private void updateMediaSessionState() {
         PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder();
 

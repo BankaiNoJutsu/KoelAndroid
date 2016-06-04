@@ -4,8 +4,8 @@
     <color name="colorPrimaryDark">#D4590F</color>
     <color name="colorAccent">#56a052</color>
 
-    <color name="mainBackground">#181818</color>
-    <color name="secondBackground">#282828</color>
+    <color name="mainBackground">#282828</color>
+    <color name="secondBackground">#181818</color>
 
     <color name="black">#000000</color>
     <color name="jet">#222222</color>

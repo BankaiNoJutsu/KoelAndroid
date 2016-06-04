@@ -22,8 +22,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,6 +54,7 @@ public class PlayingActivity extends AppCompatActivity {
     private PlaybackStateCompat lastPlaybackState;
 
     private View progressView;
+    private ImageView albumCoverView;
     private TextView songTitleView;
     private TextView albumNameView;
     private TextView artistNameView;
@@ -74,6 +78,7 @@ public class PlayingActivity extends AppCompatActivity {
 
         progressView = findViewById(R.id.login_progress);
 
+        albumCoverView = (ImageView) findViewById(R.id.album_cover);
         songTitleView = (TextView) findViewById(R.id.song_title);
         albumNameView = (TextView) findViewById(R.id.album_name);
         artistNameView = (TextView) findViewById(R.id.artist_name);
@@ -301,12 +306,15 @@ public class PlayingActivity extends AppCompatActivity {
         if(currentSong != null) {
             artistNameView.setText(currentSong.getAlbum().getArtist().getName());
             songTitleView.setText(currentSong.getTitle());
+            albumNameView.setText(currentSong.getAlbum().getName());
             lengthView.setText(currentSong.getReadableLength());
             seekBar.setProgress(0);
             seekBar.setMax((int) currentSong.getLength() * 1000);
+            Picasso.with(getApplicationContext()).load(currentSong.getAlbum().getCoverUri()).into(albumCoverView);
         } else {
             artistNameView.setText("-");
             songTitleView.setText("-");
+            albumCoverView.setImageResource(R.drawable.ic_song);
         }
     }
 
