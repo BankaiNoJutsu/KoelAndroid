@@ -73,8 +73,15 @@ public class SessionManager {
         User user = db.findUserByEmail(email);
 
         if(user == null) {
-            Toast.makeText(_context, "You should launch a data sync: your user account is limited.", Toast.LENGTH_SHORT).show();
-            return new User(0, "Not synced", email, false);
+            KoelManager koelManager = new KoelManager(_context);
+            koelManager.syncUsers();
+
+            user = db.findUserByEmail(email);
+
+            if(user == null) {
+                Toast.makeText(_context, "Error on your user account.", Toast.LENGTH_SHORT).show();
+                return new User(0, "Not synced", email, false);
+            }
         }
 
         user.setToken(token);

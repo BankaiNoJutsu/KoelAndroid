@@ -98,6 +98,9 @@ public class KoelManager {
                 if(syncSongs) {
                     db.deleteFromSongTable();
                 }
+                if(syncPlaylists) {
+                    db.deleteFromPlaylistTable();
+                }
 
 
                 if (syncUsers) {

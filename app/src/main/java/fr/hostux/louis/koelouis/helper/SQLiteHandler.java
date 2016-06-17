@@ -39,6 +39,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
     private static final String KEY_TITLE = "title";
     private static final String KEY_LENGTH = "length";
     private static final String KEY_TRACK = "track";
+    private static final String KEY_LOCAL_FILENAME = "local_filename";
 
     private static final String KEY_ARTIST_ID = "artist_id";
     private static final String KEY_ALBUM_ID = "album_id";
@@ -66,7 +67,7 @@ public class SQLiteHandler extends SQLiteOpenHelper {
                 + ")";
 
         String CREATE_SONG_TABLE = "CREATE TABLE " + TABLE_SONG + "("
-                + KEY_ID + " TEXT PRIMARY KEY, " + KEY_ALBUM_ID + " INTEGER, " + KEY_TITLE + " TEXT, " + KEY_LENGTH + " DOUBLE, " + KEY_TRACK + " INTEGER"
+                + KEY_ID + " TEXT PRIMARY KEY, " + KEY_ALBUM_ID + " INTEGER, " + KEY_TITLE + " TEXT, " + KEY_LENGTH + " DOUBLE, " + KEY_TRACK + " INTEGER, " + KEY_LOCAL_FILENAME + " TEXT"
                 + ")";
 
         String CREATE_PLAYLIST_TABLE = "CREATE TABLE " + TABLE_PLAYLIST + "("
@@ -108,6 +109,11 @@ public class SQLiteHandler extends SQLiteOpenHelper {
     public void deleteFromSongTable() {
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DELETE FROM "+ TABLE_SONG);
+    }
+    public void deleteFromPlaylistTable() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM "+ TABLE_PLAYLIST);
+        db.execSQL("DELETE FROM "+ TABLE_PLAYLIST_SONG);
     }
 
     /**
@@ -402,6 +408,16 @@ public class SQLiteHandler extends SQLiteOpenHelper {
         db.close();
 
         return song;
+    }
+
+    public void updateSongLocalFilename(String id, String newLocalFilename) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_LOCAL_FILENAME, newLocalFilename);
+
+        db.update(TABLE_SONG, values, KEY_ID + " = ?", new String[] { id });
+        db.close();
     }
 
     public List<Song> findSongsByArtistId(int artistId) {

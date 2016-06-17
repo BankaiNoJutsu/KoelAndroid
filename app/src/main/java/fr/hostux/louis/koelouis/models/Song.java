@@ -16,6 +16,8 @@ public class Song {
     private int playCount;
     private boolean liked;
 
+    private String localFilename;
+
     public Song(String id, String title, double length, int track, int playCount, boolean liked, Album album) {
         this.id = id;
         this.title = title;
@@ -57,5 +59,9 @@ public class Song {
 
     public int getTrack() {
         return track;
+    }
+
+    public String getLocalFilename() {
+        return localFilename;
     }
 }

@@ -53,6 +53,7 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
     public static final String ACTION_STOP = "action_stop";
 
     private MediaPlayer player;
+    private static MediaStore mediaStore;
     private static QueueHelper queueHelper;
     private User user;
     private AudioManager audioManager;
@@ -120,7 +121,8 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
     public void onCreate() {
         super.onCreate();
         initPlayer();
-        queueHelper = new QueueHelper(new MediaStore(getApplicationContext()));
+        mediaStore = new MediaStore(getApplicationContext());
+        queueHelper = new QueueHelper(mediaStore);
         queueHelper.setListener(this);
 
         user = new SessionManager(getApplicationContext()).getUser();
@@ -601,9 +603,9 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
         Song song = queueHelper.getCurrent();
 
         String endpoint = Config.API_URL + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
-        Log.d("main", endpoint);
-
         Uri uri = Uri.parse(endpoint);
+
+        //Uri uri = mediaStore.launchProxyAndGetSongUri(song);
 
         try {
             player.setDataSource(getApplicationContext(), uri);
