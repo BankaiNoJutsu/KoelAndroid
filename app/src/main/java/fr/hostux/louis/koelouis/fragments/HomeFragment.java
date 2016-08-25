@@ -24,7 +24,6 @@ public class HomeFragment extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String USER_NAME = "userName";
-    private static final String API_URL = "apiUrl";
 
     private User user;
 
@@ -45,7 +44,7 @@ public class HomeFragment extends Fragment {
         Bundle args = new Bundle();
 
         args.putString(USER_NAME, user.getName());
-        args.putString(API_URL, Config.API_URL);
+
         fragment.setArguments(args);
         return fragment;
     }
@@ -55,7 +54,6 @@ public class HomeFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             String userEmail = getArguments().getString(USER_NAME);
-            String apiUrl = getArguments().getString(API_URL);
         }
     }
 

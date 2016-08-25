@@ -602,7 +602,8 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
 
         Song song = queueHelper.getCurrent();
 
-        String endpoint = Config.API_URL + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
+        Config config = new Config(getApplicationContext());
+        String endpoint = config.getApiUrl() + "/" + song.getId() + "/play?jwt-token=" + user.getToken();
         Uri uri = Uri.parse(endpoint);
 
         //Uri uri = mediaStore.launchProxyAndGetSongUri(song);

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -28,6 +29,10 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,6 +43,7 @@ import fr.hostux.louis.koelouis.helper.SessionManager;
  */
 public class LoginActivity extends AppCompatActivity {
     // UI references.
+    private AutoCompleteTextView koelUrlView;
     private AutoCompleteTextView emailView;
     private EditText passwordView;
     private View progressView;
@@ -45,6 +51,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private String email;
     private String password;
+    private String koel_url;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +59,13 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         // Set up the login form.
+        koelUrlView = (AutoCompleteTextView) findViewById(R.id.base_url);
+        Config config = new Config(getApplicationContext());
+        koelUrlView.setText(config.getBaseUrl());
+
         emailView = (AutoCompleteTextView) findViewById(R.id.email);
+        String lastEmail = getApplicationContext().getSharedPreferences(SessionManager.SHARED_PREFERENCES_NAME, SessionManager.PRIVATE_MODE).getString(SessionManager.LOGIN_KEY_LAST_EMAIL, null);
+        emailView.setText(lastEmail);
 
         passwordView = (EditText) findViewById(R.id.password);
         passwordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -87,16 +100,25 @@ public class LoginActivity extends AppCompatActivity {
         // Reset errors.
         emailView.setError(null);
         passwordView.setError(null);
+        koelUrlView.setError(null);
 
         // Store values at the time of the login attempt.
         email = emailView.getText().toString();
         password = passwordView.getText().toString();
+        koel_url = koelUrlView.getText().toString();
 
-        // Show a progress spinner, and kick off a background task to
-        // perform the user login attempt.
+        if(!koel_url.startsWith("http://") && !koel_url.startsWith("https://")) {
+            koel_url = "http://" + koel_url;
+        }
+        if(koel_url.endsWith("/")) {
+            koel_url.substring(0, -1);
+        }
+
+        String endpoint = koel_url + "/api/me";
+        Log.d("login", endpoint);
+
         showProgress(true);
 
-        String endpoint = Config.API_URL + "/me";
         StringRequest stringRequest = new StringRequest(Request.Method.POST, endpoint,
                 new Response.Listener<String>() {
                     @Override
@@ -122,7 +144,7 @@ public class LoginActivity extends AppCompatActivity {
                                         }
                                     }
                                 });
-                                sessionManager.loginUser(email, token);
+                                sessionManager.loginUser(koel_url, email, token);
                             }
                         } catch(JSONException e) {
                             Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n°110).", Toast.LENGTH_SHORT).show();
@@ -136,6 +158,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void onErrorResponse(VolleyError error) {
                         Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n°130).", Toast.LENGTH_SHORT).show();
 
+                        Log.d("login", error.getMessage());
                         showProgress(false);
                     }
                 }

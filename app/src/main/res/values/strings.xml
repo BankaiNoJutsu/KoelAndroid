@@ -8,6 +8,7 @@
     <string name="action_sign_in">Log in</string>
     <string name="error_authentication">We weren\'t able to authenticate you with the provided information. Please try again.</string>
     <string name="error_field_required">This field is required</string>
+    <string name="error_malformed_url">This URL is not valid.</string>
     <string name="title_activity_login">Log in</string>
     <string name="title_activity_main">Koelouis player</string>
 

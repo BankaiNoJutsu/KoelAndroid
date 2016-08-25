@@ -39,9 +39,11 @@ public class KoelManager {
 
     private Context context;
     private String token;
-    int userId;
+    private String email;
+    int userId = 0;
 
     private KoelManagerListener listener;
+
 
     public KoelManager(Context context) {
         this.context = context;
@@ -49,6 +51,14 @@ public class KoelManager {
         SessionManager sessionManager = new SessionManager(context);
         this.token = sessionManager.getToken();
         this.userId = sessionManager.getUser().getId();
+
+        this.listener = null;
+    }
+    public KoelManager(Context context, String email, String token) {
+        this.context = context;
+
+        this.email = email;
+        this.token = token;
 
         this.listener = null;
     }
@@ -104,12 +114,18 @@ public class KoelManager {
 
 
                 if (syncUsers) {
+                    Log.d("km", "syncing users");
                     JSONArray users = jsonResponse.getJSONArray("users");
 
                     for (int u = 0; u < users.length(); u++) {
                         JSONObject user = users.getJSONObject(u);
 
+                        Log.d("km", "adding user " + user.getString("name") + "to db");
                         db.addUser(user.getInt("id"), user.getString("name"), user.getString("email"), user.getBoolean("is_admin"));
+
+                        if(userId == 0 && email != null && user.getString("email") == email) {
+                            userId = user.getInt("id");
+                        }
                     }
                 }
                 if (syncArtists) {
@@ -186,7 +202,8 @@ public class KoelManager {
             listener.onDataSync(true);
         }
 
-        String endpoint = Config.API_URL + "/data";
+        Config config = new Config(context);
+        String endpoint = config.getApiUrl() + "/data";
         StringRequest stringRequest = new StringRequest(Request.Method.GET, endpoint,
                 new Response.Listener<String>() {
                     @Override

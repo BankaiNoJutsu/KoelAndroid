@@ -122,15 +122,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Log.d("main", "creating session manager");
         SessionManager sessionManager = new SessionManager(getApplicationContext());
         if(!sessionManager.isLoggedIn()) {
+            Log.d("main", "user not logged in -> redirecting to login activity");
             Intent loginIntent = new Intent(this, LoginActivity.class);
             loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(loginIntent);
         } else {
 
             if (savedInstanceState == null) {
+                Log.d("main", "getting user");
                 user = sessionManager.getUser();
+
+                Log.d("main", "getting context manager");
                 koelManager = new KoelManager(getApplicationContext());
 
                 koelManager.setListener(new KoelManager.KoelManagerListener() {
@@ -147,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
                     // TODO: remettre ça
                 /*
                 @Override
-                public void onDataSyncError(int errorNumber) {
+                Unknown window type: 2033public void onDataSyncError(int errorNumber) {
                     Toast.makeText(getApplicationContext(), "Une erreur interne a été détectée (n° " + Integer.toString(errorNumber) + ").", Toast.LENGTH_SHORT).show();
                 }*/
                 });
@@ -205,8 +210,10 @@ public class MainActivity extends AppCompatActivity {
 
             progressBar = (ProgressBar) findViewById(R.id.progress_bar);
 
+            Log.d("main", "making app drawer");
             makeApplicationDrawer();
 
+            Log.d("main", "making fragments");
             makeFragments();
         }
     }
@@ -243,9 +250,12 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
 
         if(playerServiceIntent == null) {
+            Log.d("main", "player service intent");
             playerServiceIntent = new Intent(this, PlayerService.class);
             startService(playerServiceIntent);
             bindService(playerServiceIntent, playerConnection, Context.BIND_AUTO_CREATE);
+
+            Log.d("main", "player service created");
         }
     }
 
