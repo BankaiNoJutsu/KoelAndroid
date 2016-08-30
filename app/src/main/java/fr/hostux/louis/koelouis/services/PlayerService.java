@@ -92,6 +92,13 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
 
     private String MEDIA_ID_ROOT = "__ROOT__";
 
+    public enum PlayMode {
+        Normal,
+        RepeatOne,
+        RepeatAll
+    };
+    private PlayMode playMode = PlayMode.Normal;
+
 
     public PlayerService() {
     }
@@ -529,12 +536,25 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
     public void processPrev() {
         if(isPlaying() && player.getCurrentPosition() > player.getDuration() * 2 / 100 && getCurrent().getLength() > 4) {
             processSeekTo(0);
+        } else if(queueHelper.prev()) {
+            playSong();
+        } else if(playMode == PlayMode.RepeatAll) {
+            queueHelper.skip(-1);
+            playSong();
         } else {
-            prevSong();
+            Toast.makeText(getApplicationContext(), "There is no previous song.", Toast.LENGTH_SHORT).show();
         }
     }
     public void processNext() {
-        nextSong();
+        if(queueHelper.next()) {
+            playSong();
+        }
+        else if (playMode == PlayMode.RepeatAll) {
+            queueHelper.setCurrentPosition(0);
+            playSong();
+        } else {
+            Toast.makeText(getApplicationContext(), "There is no next song.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void pausePlayer(boolean keepFocus) {
@@ -623,13 +643,17 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
         }
     }
 
-    private void prevSong() {
-        queueHelper.skip(-1);
-        playSong();
-    }
     private void nextSong() {
-        queueHelper.skip(1);
-        playSong();
+        if(queueHelper.next()) {
+            playSong();
+        } else if (playMode == PlayMode.RepeatOne) {
+            playSong();
+        } else if (playMode == PlayMode.RepeatAll) {
+            queueHelper.setCurrentPosition(0);
+            playSong();
+        } else {
+            pausePlayer(false);
+        }
     }
 
     private void updateMediaSessionMetadata() {
@@ -701,5 +725,12 @@ public class PlayerService extends MediaBrowserServiceCompat implements QueueHel
         builder.putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, song.getId());
 
         return builder.build();
+    }
+
+    public PlayMode getPlayMode() {
+        return playMode;
+    }
+    public void setPlayMode(PlayMode playMode) {
+        this.playMode = playMode;
     }
 }

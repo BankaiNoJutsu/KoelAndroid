@@ -108,6 +108,18 @@
         android:gravity="center">
 
         <ImageButton
+            android:id="@+id/shuffle_button"
+            android:src="@drawable/ic_shuffle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageButton
             android:id="@+id/prev_button"
             android:src="@drawable/ic_prev"
             android:layout_width="wrap_content"
@@ -124,6 +136,18 @@
         <ImageButton
             android:id="@+id/next_button"
             android:src="@drawable/ic_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="?android:attr/borderlessButtonStyle"/>
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/playmode_button"
+            android:src="@drawable/ic_playnormal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="?android:attr/borderlessButtonStyle"/>

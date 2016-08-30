@@ -1,5 +1,7 @@
 package fr.hostux.louis.koelouis.helper;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -94,6 +96,23 @@ public class QueueHelper {
         }
 
         currentIndex = index;
+    }
+
+    public boolean next() {
+        if(currentIndex + 1 > queue.size() - 1) {
+            return false;
+        } else {
+            this.skip(1);
+            return true;
+        }
+    }
+    public boolean prev() {
+        if(currentIndex - 1 < 0) {
+            return false;
+        } else {
+            this.skip(-1);
+            return true;
+        }
     }
 
     public void removeFromQueue(int position) {

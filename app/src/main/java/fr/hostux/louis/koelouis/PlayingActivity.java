@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -26,6 +27,9 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.squareup.picasso.Picasso;
 
 import java.util.concurrent.Executors;
@@ -64,12 +68,19 @@ public class PlayingActivity extends AppCompatActivity {
     private ImageButton playerPlayButton;
     private ImageButton playerPrevButton;
     private ImageButton playerNextButton;
+    private ImageButton playerShuffleButton;
+    private ImageButton playerPlayModeButton;
 
     private SeekBar seekBar;
 
     private PlayerService playerService;
     private MediaSessionCompat mediaSession;
     private Intent playerServiceIntent;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +99,9 @@ public class PlayingActivity extends AppCompatActivity {
         playerPrevButton = (ImageButton) findViewById(R.id.prev_button);
         playerPlayButton = (ImageButton) findViewById(R.id.play_button);
         playerNextButton = (ImageButton) findViewById(R.id.next_button);
+
+        playerShuffleButton = (ImageButton) findViewById(R.id.shuffle_button);
+        playerPlayModeButton = (ImageButton) findViewById(R.id.playmode_button);
 
 
         playerPlayButton.setOnClickListener(new View.OnClickListener() {
@@ -121,13 +135,28 @@ public class PlayingActivity extends AppCompatActivity {
             }
         });
 
+        playerPlayModeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (playerService.getPlayMode() == PlayerService.PlayMode.Normal) {
+                    playerService.setPlayMode(PlayerService.PlayMode.RepeatOne);
+                } else if (playerService.getPlayMode() == PlayerService.PlayMode.RepeatOne) {
+                    playerService.setPlayMode(PlayerService.PlayMode.RepeatAll);
+                } else if (playerService.getPlayMode() == PlayerService.PlayMode.RepeatAll) {
+                    playerService.setPlayMode(PlayerService.PlayMode.Normal);
+                }
+
+                updatePlayMode();
+            }
+        });
+
 
         seekBar = (SeekBar) findViewById(R.id.seek_bar);
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int position, boolean b) {
-                positionView.setText(String.format("%d:%02d", position/1000/60, position/1000%60));
+                positionView.setText(String.format("%d:%02d", position / 1000 / 60, position / 1000 % 60));
             }
 
             @Override
@@ -141,21 +170,26 @@ public class PlayingActivity extends AppCompatActivity {
                 scheduleSeekbarUpdate();
             }
         });
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
 
     private ServiceConnection playerConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            PlayerService.PlayerBinder binder = (PlayerService.PlayerBinder)iBinder;
+            PlayerService.PlayerBinder binder = (PlayerService.PlayerBinder) iBinder;
             playerService = binder.getService();
 
             mediaSession = playerService.getMediaSession();
             try {
                 connectToSession(mediaSession.getSessionToken());
-            } catch(RemoteException e) {
+            } catch (RemoteException e) {
                 Log.e("main", "could not connect to media controller");
             }
+
+            updatePlayMode();
         }
 
         @Override
@@ -167,12 +201,28 @@ public class PlayingActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
 
-        if(playerServiceIntent == null) {
+        if (playerServiceIntent == null) {
             playerServiceIntent = new Intent(this, PlayerService.class);
             startService(playerServiceIntent);
             bindService(playerServiceIntent, playerConnection, Context.BIND_AUTO_CREATE);
         }
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Playing Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://fr.hostux.louis.koelouis/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
@@ -245,17 +295,17 @@ public class PlayingActivity extends AppCompatActivity {
 
 
     private void updatePlaybackState(PlaybackStateCompat state) {
-        if(state == null) {
+        if (state == null) {
             return;
         }
 
         lastPlaybackState = state;
 
-        if(state.getState() == PlaybackStateCompat.STATE_PLAYING) {
+        if (state.getState() == PlaybackStateCompat.STATE_PLAYING) {
             showProgress(false);
             scheduleSeekbarUpdate();
             playerPlayButton.setImageResource(R.drawable.ic_bigpause);
-        } else if(state.getState() == PlaybackStateCompat.STATE_BUFFERING) {
+        } else if (state.getState() == PlaybackStateCompat.STATE_BUFFERING) {
             showProgress(true);
             stopSeekbarUpdate();
         } else {
@@ -266,13 +316,13 @@ public class PlayingActivity extends AppCompatActivity {
     }
 
     private void updateProgress() {
-        if(lastPlaybackState == null) {
+        if (lastPlaybackState == null) {
             return;
         }
 
         long currentPosition = lastPlaybackState.getPosition();
 
-        if(lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
+        if (lastPlaybackState.getState() != PlaybackStateCompat.STATE_PAUSED) {
             long timeDelta = SystemClock.elapsedRealtime() - lastPlaybackState.getLastPositionUpdateTime();
             currentPosition += (int) timeDelta * lastPlaybackState.getPlaybackSpeed();
         }
@@ -303,7 +353,7 @@ public class PlayingActivity extends AppCompatActivity {
 
     private void updateMetadata(MediaMetadataCompat metadata) {
         Song currentSong = playerService.getCurrent();
-        if(currentSong != null) {
+        if (currentSong != null) {
             artistNameView.setText(currentSong.getAlbum().getArtist().getName());
             songTitleView.setText(currentSong.getTitle());
             albumNameView.setText(currentSong.getAlbum().getName());
@@ -318,4 +368,33 @@ public class PlayingActivity extends AppCompatActivity {
         }
     }
 
+    private void updatePlayMode() {
+        if (playerService.getPlayMode() == PlayerService.PlayMode.Normal) {
+            playerPlayModeButton.setImageResource(R.drawable.ic_playnormal);
+        } else if (playerService.getPlayMode() == PlayerService.PlayMode.RepeatOne) {
+            playerPlayModeButton.setImageResource(R.drawable.ic_repeat_1);
+        } else if (playerService.getPlayMode() == PlayerService.PlayMode.RepeatAll) {
+            playerPlayModeButton.setImageResource(R.drawable.ic_repeat);
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Playing Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://fr.hostux.louis.koelouis/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
+    }
 }
