@@ -9,12 +9,12 @@ WIP - the final purpose is to have a basic native Android client for phanan/koel
 - Queue system
 - Remote controls (from headseat, car, ...) and information on current song
 - Album covers, artists images...
+- Choose koel API URL dynamically (or when signing in)
 
 ## What's not working (yet)
 
 - Current queue : changes to queue are not shown while "current queue" is the current frame
 - Ability to choose view between "list mode" and "tiles mode" (artists, albums)
-- Choose koel API URL dynamically (or when signing in) --> Database SQLite depending on this url ?
 - Add shuffle mode, repetition
 
 ## What's to improve
