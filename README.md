@@ -31,3 +31,4 @@ WIP - the final purpose is to have a basic native Android client for phanan/koel
 player, apart from a local http server not easy to do)
 - Add an "save offline" function
 - Manage playlists (offline and with sync online)
+- Force closes : track them and correct
